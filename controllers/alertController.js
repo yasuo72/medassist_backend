@@ -2,10 +2,19 @@ const User = require('../models/User');
 const AlertEvent = require('../models/AlertEvent');
 
 // Initialize Twilio Client if credentials are available
-// In a real app, handle the case where these might be missing more gracefully.
-const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+// Validate that account SID starts with AC and phone number present
+const hasValidTwilioCreds =
+  process.env.TWILIO_ACCOUNT_SID?.startsWith('AC') &&
+  process.env.TWILIO_AUTH_TOKEN &&
+  process.env.TWILIO_PHONE_NUMBER;
+
+const twilioClient = hasValidTwilioCreds
   ? require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
   : null;
+
+if (!hasValidTwilioCreds) {
+  console.log('Twilio not configured or invalid credentials (SID must start with "AC"). SMS alerts will be simulated.');
+}
 
 // In a real application, you would use a service like Twilio to send SMS/calls.
 // const twilio = require('twilio');
