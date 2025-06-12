@@ -5,35 +5,56 @@ const User = require('../models/User');
 // @route   GET /api/qr/generate
 // @access  Private
 const crypto = require('crypto');
+const { v4: uuidv4 } = require('uuid');
 
 // Helper function to ensure emergency ID exists
 async function ensureEmergencyId(user) {
-  if (user.emergencyId) return user.emergencyId;
-  
-  // Generate a unique emergency ID
-  let emergencyId = crypto.randomUUID();
-  
-  // Ensure the ID is unique
-  while (await User.findOne({ emergencyId })) {
-    emergencyId = crypto.randomUUID();
+  try {
+    if (user.emergencyId) {
+      console.log(`Existing emergency ID found: ${user.emergencyId}`);
+      return user.emergencyId;
+    }
+    
+    // Generate a unique emergency ID
+    let emergencyId = uuidv4();
+    console.log(`Generated new emergency ID: ${emergencyId}`);
+    
+    // Ensure the ID is unique
+    let attempts = 0;
+    const maxAttempts = 10;
+    while (await User.findOne({ emergencyId })) {
+      attempts++;
+      if (attempts >= maxAttempts) {
+        throw new Error('Failed to generate unique emergency ID after multiple attempts');
+      }
+      emergencyId = uuidv4();
+      console.log(`Generated new emergency ID (attempt ${attempts}): ${emergencyId}`);
+    }
+    
+    // Update user with emergency ID
+    user.emergencyId = emergencyId;
+    await user.save();
+    console.log(`Emergency ID saved successfully: ${emergencyId}`);
+    
+    return emergencyId;
+  } catch (err) {
+    console.error('Error in ensureEmergencyId:', err);
+    throw err;
   }
-  
-  // Update user with emergency ID
-  user.emergencyId = emergencyId;
-  await user.save();
-  
-  return emergencyId;
 }
 
 exports.generateQrCode = async (req, res) => {
   try {
+    console.log('QR code generation started');
     const user = await User.findById(req.user.id);
     if (!user) {
+      console.error('User not found for ID:', req.user.id);
       return res.status(404).json({ msg: 'User not found' });
     }
 
     // Ensure emergency ID exists and is unique
     const emergencyId = await ensureEmergencyId(user);
+    console.log(`Using emergency ID: ${emergencyId}`);
 
     // Get user's medical profile data
     const medicalProfile = {
@@ -56,6 +77,7 @@ exports.generateQrCode = async (req, res) => {
 
     // Convert to JSON string and encode
     const qrContent = JSON.stringify(qrData);
+    console.log('QR content generated:', qrContent);
 
     // Generate QR code with medical data
     const qrCodeDataUrl = await qrcode.toDataURL(qrContent, {
@@ -69,6 +91,7 @@ exports.generateQrCode = async (req, res) => {
         light: '#ffffff'
       }
     });
+    console.log('QR code generated successfully');
 
     res.json({ 
       qrCodeDataUrl,
@@ -77,7 +100,7 @@ exports.generateQrCode = async (req, res) => {
       emergencyId
     });
   } catch (err) {
-    console.error('Error generating QR code:', err);
+    console.error('Error in generateQrCode:', err);
     res.status(500).json({ 
       error: 'Failed to generate QR code',
       details: err.message 
