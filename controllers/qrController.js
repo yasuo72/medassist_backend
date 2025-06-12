@@ -12,7 +12,14 @@ async function ensureEmergencyId(user) {
   try {
     if (user.emergencyId) {
       console.log(`Existing emergency ID found: ${user.emergencyId}`);
-      return user.emergencyId;
+      // Verify the ID exists in the database
+      const existingUser = await User.findOne({ emergencyId: user.emergencyId });
+      if (!existingUser) {
+        console.log('Existing emergency ID not found in database, generating new one');
+        user.emergencyId = null;
+      } else {
+        return user.emergencyId;
+      }
     }
     
     // Generate a unique emergency ID
@@ -22,19 +29,52 @@ async function ensureEmergencyId(user) {
     // Ensure the ID is unique
     let attempts = 0;
     const maxAttempts = 10;
-    while (await User.findOne({ emergencyId })) {
+    let isUnique = false;
+    
+    while (!isUnique && attempts < maxAttempts) {
       attempts++;
-      if (attempts >= maxAttempts) {
-        throw new Error('Failed to generate unique emergency ID after multiple attempts');
+      const existing = await User.findOne({ emergencyId });
+      if (!existing) {
+        isUnique = true;
+      } else {
+        emergencyId = uuidv4();
+        console.log(`Generated new emergency ID (attempt ${attempts}): ${emergencyId}`);
       }
-      emergencyId = uuidv4();
-      console.log(`Generated new emergency ID (attempt ${attempts}): ${emergencyId}`);
+    }
+    
+    if (!isUnique) {
+      throw new Error('Failed to generate unique emergency ID after multiple attempts');
     }
     
     // Update user with emergency ID
     user.emergencyId = emergencyId;
-    await user.save();
-    console.log(`Emergency ID saved successfully: ${emergencyId}`);
+    
+    // Save with retry mechanism
+    let saveAttempts = 0;
+    const maxSaveAttempts = 3;
+    let saveSuccess = false;
+    
+    while (!saveSuccess && saveAttempts < maxSaveAttempts) {
+      try {
+        await user.save();
+        saveSuccess = true;
+        console.log(`Emergency ID saved successfully: ${emergencyId}`);
+      } catch (saveErr) {
+        saveAttempts++;
+        console.error(`Save attempt ${saveAttempts} failed:`, saveErr);
+        if (saveAttempts >= maxSaveAttempts) {
+          throw new Error(`Failed to save user after ${maxSaveAttempts} attempts: ${saveErr.message}`);
+        }
+        // Wait a bit before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000 * saveAttempts));
+      }
+    }
+    
+    // Verify the ID was saved
+    const savedUser = await User.findById(user._id);
+    if (!savedUser || !savedUser.emergencyId) {
+      throw new Error('Emergency ID not saved in database');
+    }
     
     return emergencyId;
   } catch (err) {
@@ -92,6 +132,12 @@ exports.generateQrCode = async (req, res) => {
       }
     });
     console.log('QR code generated successfully');
+
+    // Verify the emergency ID is accessible
+    const testUser = await User.findOne({ emergencyId });
+    if (!testUser) {
+      throw new Error('Emergency ID not accessible after generation');
+    }
 
     res.json({ 
       qrCodeDataUrl,
