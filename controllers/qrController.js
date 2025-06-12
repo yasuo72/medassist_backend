@@ -4,11 +4,21 @@ const User = require('../models/User');
 // @desc    Generate a QR code for the logged-in user's emergency profile
 // @route   GET /api/qr/generate
 // @access  Private
+const crypto = require('crypto');
+
 exports.generateQrCode = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    if (!user || !user.emergencyId) {
-      return res.status(404).json({ msg: 'Emergency ID not found for this user.' });
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // Generate or get existing emergency ID
+    if (!user.emergencyId) {
+      // Generate a unique emergency ID using crypto
+      const emergencyId = crypto.randomUUID();
+      user.emergencyId = emergencyId;
+      await user.save();
     }
 
     // Get user's medical profile data
@@ -49,12 +59,50 @@ exports.generateQrCode = async (req, res) => {
     res.json({ 
       qrCodeDataUrl,
       qrContent, // For debugging
-      emergencyUrl: qrData.emergencyUrl
+      emergencyUrl: qrData.emergencyUrl,
+      emergencyId: user.emergencyId
     });
   } catch (err) {
     console.error('Error generating QR code:', err);
     res.status(500).json({ 
       error: 'Failed to generate QR code',
+      details: err.message 
+    });
+  }
+};
+
+// Helper function to verify QR code content
+exports.verifyQrCode = async (req, res) => {
+  try {
+    const { qrContent } = req.body;
+    
+    if (!qrContent) {
+      return res.status(400).json({ msg: 'QR content is required' });
+    }
+
+    // Parse the QR code content
+    const qrData = JSON.parse(qrContent);
+    
+    // Verify the QR code type and version
+    if (qrData.type !== 'MEDICAL_PROFILE' || qrData.version !== '1.0') {
+      return res.status(400).json({ msg: 'Invalid QR code format' });
+    }
+
+    // Get the emergency profile
+    const user = await User.findOne({ emergencyId: qrData.data.emergencyId });
+    if (!user) {
+      return res.status(404).json({ msg: 'Emergency profile not found' });
+    }
+
+    // Return the user's medical profile
+    res.json({
+      ...qrData.data,
+      emergencyUrl: qrData.emergencyUrl
+    });
+  } catch (err) {
+    console.error('Error verifying QR code:', err);
+    res.status(500).json({ 
+      error: 'Failed to verify QR code',
       details: err.message 
     });
   }
