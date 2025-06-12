@@ -11,23 +11,52 @@ exports.generateQrCode = async (req, res) => {
       return res.status(404).json({ msg: 'Emergency ID not found for this user.' });
     }
 
-    // The URL that the QR code will point to.
-    // The base URL should be stored in an environment variable.
-    // Example: http://localhost:3000 or your production frontend URL
-    const emergencyUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/emergency/view/${user.emergencyId}`;
+    // Get user's medical profile data
+    const medicalProfile = {
+      emergencyId: user.emergencyId,
+      bloodGroup: user.bloodGroup || 'Not specified',
+      allergies: user.allergies || [],
+      medicalConditions: user.medicalConditions || [],
+      currentMedications: user.currentMedications || [],
+      emergencyContacts: user.emergencyContacts || [],
+      date: user.date
+    };
 
-    // Generate QR code as a Data URL (base64)
-    const qrCodeDataUrl = await qrcode.toDataURL(emergencyUrl, {
+    // Create a structured data object for QR code
+    const qrData = {
+      type: 'MEDICAL_PROFILE',
+      version: '1.0',
+      data: medicalProfile,
+      emergencyUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/emergency/view/${user.emergencyId}`
+    };
+
+    // Convert to JSON string and encode
+    const qrContent = JSON.stringify(qrData);
+
+    // Generate QR code with medical data
+    const qrCodeDataUrl = await qrcode.toDataURL(qrContent, {
       errorCorrectionLevel: 'H',
       type: 'image/png',
       quality: 0.9,
       margin: 1,
+      width: 400,
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
     });
 
-    res.json({ qrCodeDataUrl });
+    res.json({ 
+      qrCodeDataUrl,
+      qrContent, // For debugging
+      emergencyUrl: qrData.emergencyUrl
+    });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('Error generating QR code:', err);
+    res.status(500).json({ 
+      error: 'Failed to generate QR code',
+      details: err.message 
+    });
   }
 };
 
