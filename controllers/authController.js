@@ -182,7 +182,8 @@ exports.loginUser = async (req, res) => {
       { expiresIn: 360000 },
       (err, token) => {
         if (err) throw err;
-        res.json({ token });
+        const userSafe = { id: user.id, name: user.name, email: user.email };
+        res.json({ token, user: userSafe });
       }
     );
   } catch (err) {
@@ -247,7 +248,8 @@ exports.registerUser = async (req, res) => {
       { expiresIn: 360000 }, // Expires in 100 hours
       (err, token) => {
         if (err) throw err;
-        res.json({ token });
+        const userSafe = { id: user.id, name: user.name, email: user.email };
+        res.json({ token, user: userSafe });
       }
     );
   } catch (err) {
