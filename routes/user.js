@@ -21,4 +21,14 @@ router.delete('/contacts/:contactId', auth, userController.deleteEmergencyContac
 // Update contact
 router.put('/contacts/:contactId', auth, userController.updateEmergencyContact);
 
+// =========================
+//  Profile Routes
+// =========================
+
+// Get logged-in user's profile
+router.get('/profile', auth, userController.getProfile);
+
+// Create / update profile
+router.post('/profile', auth, userController.updateProfile);
+
 module.exports = router;

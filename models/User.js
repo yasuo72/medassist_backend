@@ -30,6 +30,14 @@ const UserSchema = new mongoose.Schema({
   fingerprintHash: {
     type: String,
   },
+  bloodGroup: {
+    type: String,
+  },
+  medicalConditions: [String],
+  allergies: [String],
+  pastSurgeries: [String],
+  currentMedications: [String],
+  reportFilePaths: [String],
   emergencyContacts: [
     {
       name: {
