@@ -4,6 +4,7 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const passport = require('passport');
 const session = require('express-session');
+const path = require('path');
 
 // Passport Config
 require('./config/passport')(passport);
@@ -17,6 +18,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Express Session Middleware
 // This is required for the Google OAuth flow
@@ -45,6 +47,11 @@ app.use('/api/summary', require('./routes/summary'));
 // Basic Route
 app.get('/', (req, res) => {
   res.send('MedAssist+ Backend API is running...');
+});
+
+// Public emergency viewer route – serves the HTML shell; client-side JS will fetch details
+app.get('/emergency/view/:emergencyId', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'emergency-view.html'));
 });
 
 const PORT = process.env.PORT || 5000;
