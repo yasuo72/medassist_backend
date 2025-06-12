@@ -6,6 +6,25 @@ const User = require('../models/User');
 // @access  Private
 const crypto = require('crypto');
 
+// Helper function to ensure emergency ID exists
+async function ensureEmergencyId(user) {
+  if (user.emergencyId) return user.emergencyId;
+  
+  // Generate a unique emergency ID
+  let emergencyId = crypto.randomUUID();
+  
+  // Ensure the ID is unique
+  while (await User.findOne({ emergencyId })) {
+    emergencyId = crypto.randomUUID();
+  }
+  
+  // Update user with emergency ID
+  user.emergencyId = emergencyId;
+  await user.save();
+  
+  return emergencyId;
+}
+
 exports.generateQrCode = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -13,17 +32,12 @@ exports.generateQrCode = async (req, res) => {
       return res.status(404).json({ msg: 'User not found' });
     }
 
-    // Generate or get existing emergency ID
-    if (!user.emergencyId) {
-      // Generate a unique emergency ID using crypto
-      const emergencyId = crypto.randomUUID();
-      user.emergencyId = emergencyId;
-      await user.save();
-    }
+    // Ensure emergency ID exists and is unique
+    const emergencyId = await ensureEmergencyId(user);
 
     // Get user's medical profile data
     const medicalProfile = {
-      emergencyId: user.emergencyId,
+      emergencyId,
       bloodGroup: user.bloodGroup || 'Not specified',
       allergies: user.allergies || [],
       medicalConditions: user.medicalConditions || [],
@@ -37,7 +51,7 @@ exports.generateQrCode = async (req, res) => {
       type: 'MEDICAL_PROFILE',
       version: '1.0',
       data: medicalProfile,
-      emergencyUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/emergency/view/${user.emergencyId}`
+      emergencyUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/emergency/view/${emergencyId}`
     };
 
     // Convert to JSON string and encode
@@ -60,7 +74,7 @@ exports.generateQrCode = async (req, res) => {
       qrCodeDataUrl,
       qrContent, // For debugging
       emergencyUrl: qrData.emergencyUrl,
-      emergencyId: user.emergencyId
+      emergencyId
     });
   } catch (err) {
     console.error('Error generating QR code:', err);
