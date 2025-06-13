@@ -37,7 +37,11 @@ exports.getEmergencyProfile = async (req, res) => {
     const publicProfile = {
       user: {
         name: user.name,
-        // Add other safe-to-share fields from the User model here if needed
+        emergencyId: user.emergencyId,
+        bloodGroup: user.bloodGroup,
+        allergies: user.allergies,
+        medicalConditions: user.medicalConditions,
+        currentMedications: user.currentMedications,
       },
       familyMembers: familyMembers.map(member => ({
         name: member.name,
