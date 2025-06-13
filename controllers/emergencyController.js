@@ -51,7 +51,11 @@ exports.getEmergencyProfile = async (req, res) => {
         allergies: member.allergies,
         medicalConditions: member.medicalConditions,
       })),
-      // We can also add a summarized list of the user's own medical conditions if stored on the user model
+      emergencyContacts: (user.emergencyContacts || []).map(c => ({
+        name: c.name,
+        phone: c.phone,
+        relationship: c.relationship,
+      })),
     };
 
     res.json(publicProfile);
@@ -116,13 +120,25 @@ exports.verifyBiometricPublic = async (req, res) => {
     // If a user is found, return their public emergency profile
     const familyMembers = await FamilyMember.find({ guardian: user._id });
     const publicProfile = {
-      user: { name: user.name },
+      user: { 
+        name: user.name, 
+        emergencyId: user.emergencyId,
+        bloodGroup: user.bloodGroup,
+        allergies: user.allergies,
+        medicalConditions: user.medicalConditions,
+        currentMedications: user.currentMedications,
+      },
       familyMembers: familyMembers.map(m => ({
         name: m.name,
         relationship: m.relationship,
         bloodGroup: m.bloodGroup,
         allergies: m.allergies,
         medicalConditions: m.medicalConditions,
+      })),
+      emergencyContacts: (user.emergencyContacts || []).map(c => ({
+        name: c.name,
+        phone: c.phone,
+        relationship: c.relationship,
       })),
     };
 
