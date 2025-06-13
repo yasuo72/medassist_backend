@@ -16,15 +16,11 @@ router.post(
   '/',
   [
     auth,
-    upload.fields([
-      { name: 'recordFile', maxCount: 1 },
-      { name: 'file', maxCount: 1 }, // legacy/mobile key
-    ]),
+    upload.any(),
     // unify to req.file for controller compatibility
     (req, _res, next) => {
-      if (!req.file) {
-        if (req.files?.recordFile?.[0]) req.file = req.files.recordFile[0];
-        else if (req.files?.file?.[0]) req.file = req.files.file[0];
+      if (!req.file && Array.isArray(req.files) && req.files.length) {
+        req.file = req.files[0];
       }
       next();
     },
@@ -39,14 +35,10 @@ router.post(
   '/upload',
   [
     auth,
-    upload.fields([
-      { name: 'recordFile', maxCount: 1 },
-      { name: 'file', maxCount: 1 },
-    ]),
+    upload.any(),
     (req, _res, next) => {
-      if (!req.file) {
-        if (req.files?.recordFile?.[0]) req.file = req.files.recordFile[0];
-        else if (req.files?.file?.[0]) req.file = req.files.file[0];
+      if (!req.file && Array.isArray(req.files) && req.files.length) {
+        req.file = req.files[0];
       }
       next();
     },
