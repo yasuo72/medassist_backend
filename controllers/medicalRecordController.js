@@ -22,7 +22,7 @@ exports.createMedicalRecord = async (req, res) => {
       user: req.user.id,
       title,
       recordType,
-      filePath: req.file.path,
+      filePath: path.join('uploads', req.file.filename),
       fileMimetype: req.file.mimetype,
     });
 
