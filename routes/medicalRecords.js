@@ -18,6 +18,15 @@ router.post(
   medicalRecordController.createMedicalRecord
 );
 
+// @route   POST /api/records/upload (legacy/mobile)
+// @desc    Upload a new medical record (alias for POST /api/records)
+// @access  Private
+router.post(
+  '/upload',
+  [auth, upload.single('recordFile')],
+  medicalRecordController.createMedicalRecord
+);
+
 // @route   DELETE /api/records/:id
 // @desc    Delete a medical record
 // @access  Private
