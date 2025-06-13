@@ -1,4 +1,4 @@
 [build]
 root = "."          # build from medassist-backend directory itself
-buildCommand = "npm ci"
+buildCommand = "npm install"
 startCommand = "node server.js"
