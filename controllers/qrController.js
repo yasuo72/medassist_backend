@@ -4,30 +4,190 @@ const User = require('../models/User');
 // @desc    Generate a QR code for the logged-in user's emergency profile
 // @route   GET /api/qr/generate
 // @access  Private
+const crypto = require('crypto');
+const { v4: uuidv4 } = require('uuid');
+
+// Helper function to ensure emergency ID exists
+async function ensureEmergencyId(user) {
+  try {
+    if (user.emergencyId) {
+      console.log(`Existing emergency ID found: ${user.emergencyId}`);
+      // Verify the ID exists in the database
+      const existingUser = await User.findOne({ emergencyId: user.emergencyId });
+      if (!existingUser) {
+        console.log('Existing emergency ID not found in database, generating new one');
+        user.emergencyId = null;
+      } else {
+        return user.emergencyId;
+      }
+    }
+    
+    // Generate a unique emergency ID
+    let emergencyId = uuidv4();
+    console.log(`Generated new emergency ID: ${emergencyId}`);
+    
+    // Ensure the ID is unique
+    let attempts = 0;
+    const maxAttempts = 10;
+    let isUnique = false;
+    
+    while (!isUnique && attempts < maxAttempts) {
+      attempts++;
+      const existing = await User.findOne({ emergencyId });
+      if (!existing) {
+        isUnique = true;
+      } else {
+        emergencyId = uuidv4();
+        console.log(`Generated new emergency ID (attempt ${attempts}): ${emergencyId}`);
+      }
+    }
+    
+    if (!isUnique) {
+      throw new Error('Failed to generate unique emergency ID after multiple attempts');
+    }
+    
+    // Update user with emergency ID
+    user.emergencyId = emergencyId;
+    
+    // Save with retry mechanism
+    let saveAttempts = 0;
+    const maxSaveAttempts = 3;
+    let saveSuccess = false;
+    
+    while (!saveSuccess && saveAttempts < maxSaveAttempts) {
+      try {
+        await user.save();
+        saveSuccess = true;
+        console.log(`Emergency ID saved successfully: ${emergencyId}`);
+      } catch (saveErr) {
+        saveAttempts++;
+        console.error(`Save attempt ${saveAttempts} failed:`, saveErr);
+        if (saveAttempts >= maxSaveAttempts) {
+          throw new Error(`Failed to save user after ${maxSaveAttempts} attempts: ${saveErr.message}`);
+        }
+        // Wait a bit before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000 * saveAttempts));
+      }
+    }
+    
+    // Verify the ID was saved
+    const savedUser = await User.findById(user._id);
+    if (!savedUser || !savedUser.emergencyId) {
+      throw new Error('Emergency ID not saved in database');
+    }
+    
+    return emergencyId;
+  } catch (err) {
+    console.error('Error in ensureEmergencyId:', err);
+    throw err;
+  }
+}
+
 exports.generateQrCode = async (req, res) => {
   try {
+    console.log('QR code generation started');
     const user = await User.findById(req.user.id);
-    if (!user || !user.emergencyId) {
-      return res.status(404).json({ msg: 'Emergency ID not found for this user.' });
+    if (!user) {
+      console.error('User not found for ID:', req.user.id);
+      return res.status(404).json({ msg: 'User not found' });
     }
 
-    // The URL that the QR code will point to.
-    // The base URL should be stored in an environment variable.
-    // Example: http://localhost:3000 or your production frontend URL
-    const emergencyUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/emergency/view/${user.emergencyId}`;
+    // Ensure emergency ID exists and is unique
+    const emergencyId = await ensureEmergencyId(user);
+    console.log(`Using emergency ID: ${emergencyId}`);
 
-    // Generate QR code as a Data URL (base64)
-    const qrCodeDataUrl = await qrcode.toDataURL(emergencyUrl, {
+    // Get user's medical profile data
+    const medicalProfile = {
+      emergencyId,
+      bloodGroup: user.bloodGroup || 'Not specified',
+      allergies: user.allergies || [],
+      medicalConditions: user.medicalConditions || [],
+      currentMedications: user.currentMedications || [],
+      emergencyContacts: user.emergencyContacts || [],
+      date: user.date
+    };
+
+    // Create a structured data object for QR code
+    const qrData = {
+      type: 'MEDICAL_PROFILE',
+      version: '1.0',
+      data: medicalProfile,
+      emergencyUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/emergency/view/${emergencyId}`
+    };
+
+    // Convert to JSON string and encode
+    const qrContent = JSON.stringify(qrData);
+    console.log('QR content generated:', qrContent);
+
+    // Generate QR code with medical data
+    const qrCodeDataUrl = await qrcode.toDataURL(qrContent, {
       errorCorrectionLevel: 'H',
       type: 'image/png',
       quality: 0.9,
       margin: 1,
+      width: 400,
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
     });
+    console.log('QR code generated successfully');
 
-    res.json({ qrCodeDataUrl });
+    // Verify the emergency ID is accessible
+    const testUser = await User.findOne({ emergencyId });
+    if (!testUser) {
+      throw new Error('Emergency ID not accessible after generation');
+    }
+
+    res.json({ 
+      qrCodeDataUrl,
+      qrContent, // For debugging
+      emergencyUrl: qrData.emergencyUrl,
+      emergencyId
+    });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('Error in generateQrCode:', err);
+    res.status(500).json({ 
+      error: 'Failed to generate QR code',
+      details: err.message 
+    });
+  }
+};
+
+// Helper function to verify QR code content
+exports.verifyQrCode = async (req, res) => {
+  try {
+    const { qrContent } = req.body;
+    
+    if (!qrContent) {
+      return res.status(400).json({ msg: 'QR content is required' });
+    }
+
+    // Parse the QR code content
+    const qrData = JSON.parse(qrContent);
+    
+    // Verify the QR code type and version
+    if (qrData.type !== 'MEDICAL_PROFILE' || qrData.version !== '1.0') {
+      return res.status(400).json({ msg: 'Invalid QR code format' });
+    }
+
+    // Get the emergency profile
+    const user = await User.findOne({ emergencyId: qrData.data.emergencyId });
+    if (!user) {
+      return res.status(404).json({ msg: 'Emergency profile not found' });
+    }
+
+    // Return the user's medical profile
+    res.json({
+      ...qrData.data,
+      emergencyUrl: qrData.emergencyUrl
+    });
+  } catch (err) {
+    console.error('Error verifying QR code:', err);
+    res.status(500).json({ 
+      error: 'Failed to verify QR code',
+      details: err.message 
+    });
   }
 };
 

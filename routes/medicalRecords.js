@@ -14,7 +14,43 @@ router.get('/', auth, medicalRecordController.getMedicalRecords);
 // @access  Private
 router.post(
   '/',
-  [auth, upload.single('recordFile')], // 'recordFile' is the field name for the uploaded file
+  [
+    auth,
+    upload.fields([
+      { name: 'recordFile', maxCount: 1 },
+      { name: 'file', maxCount: 1 }, // legacy/mobile key
+    ]),
+    // unify to req.file for controller compatibility
+    (req, _res, next) => {
+      if (!req.file) {
+        if (req.files?.recordFile?.[0]) req.file = req.files.recordFile[0];
+        else if (req.files?.file?.[0]) req.file = req.files.file[0];
+      }
+      next();
+    },
+  ],
+  medicalRecordController.createMedicalRecord
+);
+
+// @route   POST /api/records/upload (legacy/mobile)
+// @desc    Upload a new medical record (alias for POST /api/records)
+// @access  Private
+router.post(
+  '/upload',
+  [
+    auth,
+    upload.fields([
+      { name: 'recordFile', maxCount: 1 },
+      { name: 'file', maxCount: 1 },
+    ]),
+    (req, _res, next) => {
+      if (!req.file) {
+        if (req.files?.recordFile?.[0]) req.file = req.files.recordFile[0];
+        else if (req.files?.file?.[0]) req.file = req.files.file[0];
+      }
+      next();
+    },
+  ],
   medicalRecordController.createMedicalRecord
 );
 
