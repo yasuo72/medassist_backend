@@ -20,6 +20,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Serve uploaded medical record files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Express Session Middleware
 // This is required for the Google OAuth flow
 app.use(
