@@ -14,7 +14,7 @@ const MedicalRecordSchema = new Schema({
   recordType: {
     type: String,
     required: true,
-    enum: ['Lab Report', 'Prescription', 'Imaging', 'Clinical Note', 'Other'],
+    enum: ['Lab Report', 'Prescription', 'Imaging', 'Clinical Note', 'Report', 'Other'],
   },
   filePath: {
     type: String,
