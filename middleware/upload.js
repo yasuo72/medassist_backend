@@ -22,14 +22,11 @@ const storage = multer.diskStorage({
 
 // File filter to accept only common document and image types
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|pdf|doc|docx/;
-  const mimetype = allowedTypes.test(file.mimetype);
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-
-  if (mimetype && extname) {
+  const allowedExt = /\.(jpeg|jpg|png|pdf|doc|docx)$/i;
+  if (allowedExt.test(path.extname(file.originalname))) {
     return cb(null, true);
   }
-  cb('Error: File type not supported! Only images, PDFs, and DOCs are allowed.');
+  cb(new Error('File type not supported! Only images, PDFs, and DOCs are allowed.'));
 };
 
 const upload = multer({

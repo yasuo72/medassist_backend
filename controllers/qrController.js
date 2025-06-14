@@ -115,23 +115,8 @@ exports.generateQrCode = async (req, res) => {
       emergencyUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/emergency/view/${emergencyId}`
     };
 
-    // Convert to JSON string and encode
-    const qrContent = JSON.stringify(qrData);
-    console.log('QR content generated:', qrContent);
-
-    // Generate QR code with medical data
-    const qrCodeDataUrl = await qrcode.toDataURL(qrContent, {
-      errorCorrectionLevel: 'H',
-      type: 'image/png',
-      quality: 0.9,
-      margin: 1,
-      width: 400,
-      color: {
-        dark: '#000000',
-        light: '#ffffff'
-      }
-    });
-    console.log('QR code generated successfully');
+    // For the new lightweight flow we encode only the emergencyId in the QR.
+    const qrContent = emergencyId; // a short opaque string
 
     // Verify the emergency ID is accessible
     const testUser = await User.findOne({ emergencyId });
@@ -139,11 +124,9 @@ exports.generateQrCode = async (req, res) => {
       throw new Error('Emergency ID not accessible after generation');
     }
 
-    res.json({ 
-      qrCodeDataUrl,
-      qrContent, // For debugging
+    res.json({
+      emergencyId,
       emergencyUrl: qrData.emergencyUrl,
-      emergencyId
     });
   } catch (err) {
     console.error('Error in generateQrCode:', err);
