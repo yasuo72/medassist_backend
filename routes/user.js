@@ -146,21 +146,8 @@ router.post('/profile', auth, async (req, res) => {
     console.error('Error updating profile:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: error.message || 'Internal server error'
     });
-  }
-});
-
-// Create / update profile
-router.post('/profile', auth, async (req, res, next) => {
-  try {
-    const profile = await userController.updateProfile(req);
-    res.json({
-      success: true,
-      data: profile
-    });
-  } catch (error) {
-    next(error);
   }
 });
 
