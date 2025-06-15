@@ -51,6 +51,21 @@ router.get('/health', (req, res) => {
   });
 });
 
+// @route   GET /api/user/profile
+// @desc    Get user profile
+// @access  Private
+router.get('/profile', auth, async (req, res, next) => {
+  try {
+    const user = await userController.getUserProfile(req);
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Face verification endpoint
 router.post('/api/verify_face', async (req, res, next) => {
   try {

@@ -1,5 +1,37 @@
 const User = require('../models/User');
 
+// @desc    Get user profile
+// @route   GET /api/user/profile
+// @access  Private
+exports.getUserProfile = async (req) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Format the profile data
+    const profile = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      emergencyId: user.emergencyId,
+      bloodGroup: user.bloodGroup,
+      medicalConditions: user.medicalConditions,
+      allergies: user.allergies,
+      pastSurgeries: user.pastSurgeries,
+      currentMedications: user.currentMedications,
+      emergencyContacts: user.emergencyContacts
+    };
+
+    return profile;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// @desc    Get all emergency contacts for a user
+
 // @desc    Get all emergency contacts for a user
 // @route   GET /api/user/contacts
 // @access  Private
