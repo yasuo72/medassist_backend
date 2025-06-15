@@ -63,7 +63,6 @@ app.use('/api/emergency', require('./routes/emergency'));
 app.use('/api/user', require('./routes/user'));
 app.use('/api/alert', require('./routes/alert'));
 app.use('/api/qr', require('./routes/qr'));
-app.use('/api/summary', require('./routes/summary'));
 
 // Basic Route
 app.get('/', (req, res) => {
