@@ -48,8 +48,11 @@ exports.getUserProfile = async (req, res) => {
 // @access  Private
 exports.updateProfile = async (req, res) => {
   try {
+    console.log('Request body:', req.body); // Add debug logging
+    
     const user = await User.findById(req.user.id);
     if (!user) {
+      console.error('User not found for ID:', req.user.id);
       return res.status(404).json({
         success: false,
         message: 'User not found'
@@ -74,10 +77,12 @@ exports.updateProfile = async (req, res) => {
     Object.keys(updateFields).forEach(key => {
       if (updateFields[key] !== undefined) {
         user[key] = updateFields[key];
+        console.log(`Updating field ${key} to`, updateFields[key]); // Add debug logging
       }
     });
 
     await user.save();
+    console.log('User saved successfully'); // Add debug logging
 
     // Format the updated profile data
     const updatedProfile = {
@@ -88,20 +93,22 @@ exports.updateProfile = async (req, res) => {
       bloodGroup: user.bloodGroup,
       medicalConditions: user.medicalConditions,
       allergies: user.allergies,
-      pastSurgeries: user.pastSurgeries,
+      pastSurges: user.pastSurgeries,
       currentMedications: user.currentMedications,
       emergencyContacts: user.emergencyContacts
     };
 
-    return res.json({
+    console.log('Sending response:', updatedProfile); // Add debug logging
+    res.json({
       success: true,
       data: updatedProfile
     });
   } catch (error) {
-    console.error('Error updating user profile:', error);
-    return res.status(500).json({
+    console.error('Error in updateProfile:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: error.message || 'Internal server error'
     });
   }
 };

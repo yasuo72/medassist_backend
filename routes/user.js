@@ -13,7 +13,7 @@ const limiter = rateLimit({
     success: false,
     message: 'Too many requests from this IP, please try again later.'
   },
-  trustProxy: true // Enable proxy trust for Railway deployment
+  trustProxy: 1 // Trust first proxy (Railway)
 });
 
 // Apply rate limiting to all routes
@@ -158,7 +158,7 @@ router.get('/profile', auth, async (req, res, next) => {
 });
 
 // Update logged-in user's profile
-router.post('/profile', auth, async (req, res, next) => {
+router.post('/profile', auth, async (req, res) => {
   try {
     const updatedProfile = await userController.updateProfile(req);
     res.json({
@@ -166,7 +166,11 @@ router.post('/profile', auth, async (req, res, next) => {
       data: updatedProfile
     });
   } catch (error) {
-    next(error);
+    console.error('Error updating profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   }
 });
 
