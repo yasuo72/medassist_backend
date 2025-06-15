@@ -57,30 +57,7 @@ router.get('/health', (req, res) => {
 // @access  Private
 router.get('/profile', auth, userController.getUserProfile);
 
-// Face verification endpoint
-router.post('/api/verify_face', async (req, res, next) => {
-  try {
-    const { image_data } = req.body;
-    
-    if (!image_data) {
-      return res.status(400).json({
-        success: false,
-        message: 'Image data is required'
-      });
-    }
 
-    // Call AI service for face verification
-    const aiService = require('../services/aiService');
-    const result = await aiService.analyzeData({
-      image_data,
-      action: 'verify'
-    });
-
-    return res.json(result);
-  } catch (error) {
-    next(error);
-  }
-});
 
 // @route   GET /api/user/contacts
 // @desc    Get all emergency contacts for a user

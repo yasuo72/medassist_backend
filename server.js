@@ -14,12 +14,28 @@ require('./config/passport')(passport);
 connectDB();
 
 const app = express();
+const rateLimit = require('express-rate-limit');
+const { rateLimit: rateLimitConfig } = require('./config/rate-limit');
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: rateLimitConfig.windowMs, // 15 minutes
+  max: rateLimitConfig.maxRequests, // limit each IP to 100 requests per windowMs
+  message: {
+    success: false,
+    message: 'Too many requests from this IP, please try again later.'
+  },
+  trustProxy: 1 // Trust first proxy (Railway)
+});
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Apply rate limiting
+app.use(limiter);
 
 // Serve uploaded medical record files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
