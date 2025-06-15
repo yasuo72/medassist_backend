@@ -135,14 +135,20 @@ router.get('/profile', auth, async (req, res, next) => {
 });
 
 // Update logged-in user's profile
-router.post('/profile', auth, async (req, res, next) => {
+router.post('/profile', auth, async (req, res) => {
   try {
-    const result = await userController.updateProfile(req);
-    res.json(result);
+    const updatedProfile = await userController.updateProfile(req);
+    res.json({
+      success: true,
+      data: updatedProfile
+    });
   } catch (error) {
     console.error('Error updating profile:', error);
     console.error('Error stack:', error.stack);
-    next(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error'
+    });
   }
 });
 
