@@ -43,6 +43,69 @@ exports.getUserProfile = async (req, res) => {
   }
 };
 
+// @desc    Update user profile
+// @route   POST /api/user/profile
+// @access  Private
+exports.updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update user fields from request body
+    const updateFields = {
+      name: req.body.name,
+      bloodGroup: req.body.bloodGroup,
+      medicalConditions: req.body.medicalConditions,
+      allergies: req.body.allergies,
+      pastSurgeries: req.body.pastSurgeries,
+      currentMedications: req.body.currentMedications,
+      reportFilePaths: req.body.reportFilePaths,
+      faceScanPath: req.body.faceScanPath,
+      fingerprintData: req.body.fingerprintData,
+      emergencyContacts: req.body.emergencyContacts
+    };
+
+    // Only update fields that are provided
+    Object.keys(updateFields).forEach(key => {
+      if (updateFields[key] !== undefined) {
+        user[key] = updateFields[key];
+      }
+    });
+
+    await user.save();
+
+    // Format the updated profile data
+    const updatedProfile = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      emergencyId: user.emergencyId,
+      bloodGroup: user.bloodGroup,
+      medicalConditions: user.medicalConditions,
+      allergies: user.allergies,
+      pastSurgeries: user.pastSurgeries,
+      currentMedications: user.currentMedications,
+      emergencyContacts: user.emergencyContacts
+    };
+
+    return res.json({
+      success: true,
+      data: updatedProfile
+    });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
 // @desc    Get all emergency contacts for a user
 
 // @desc    Get all emergency contacts for a user

@@ -157,6 +157,19 @@ router.get('/profile', auth, async (req, res, next) => {
   }
 });
 
+// Update logged-in user's profile
+router.post('/profile', auth, async (req, res, next) => {
+  try {
+    const updatedProfile = await userController.updateProfile(req);
+    res.json({
+      success: true,
+      data: updatedProfile
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Create / update profile
 router.post('/profile', auth, async (req, res, next) => {
   try {
