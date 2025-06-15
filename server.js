@@ -4,7 +4,7 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const passport = require('passport');
 const session = require('express-session');
-const RedisStore = require('connect-redis')(session);
+const RedisStore = require('connect-redis');
 const path = require('path');
 
 // Passport Config
@@ -41,7 +41,10 @@ const sessionConfig = {
 
 if (process.env.NODE_ENV === 'production') {
   sessionConfig.store = new RedisStore({
-    url: process.env.REDIS_URL || 'redis://localhost:6379'
+    url: process.env.REDIS_URL || 'redis://localhost:6379',
+    client: Redis.createClient({
+      url: process.env.REDIS_URL || 'redis://localhost:6379'
+    })
   });
 }
 
