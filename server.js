@@ -15,6 +15,9 @@ connectDB();
 
 const app = express();
 
+// Trust proxy for Railway
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -41,7 +44,8 @@ const sessionConfig = {
 
 if (process.env.NODE_ENV === 'production') {
   sessionConfig.store = new RedisStore({
-    url: process.env.REDIS_URL || 'redis://localhost:6379'
+    host: process.env.REDIS_HOST || 'localhost',
+    port: process.env.REDIS_PORT || 6379
   });
 }
 

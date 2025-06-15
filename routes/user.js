@@ -12,7 +12,8 @@ const limiter = rateLimit({
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'
-  }
+  },
+  trustProxy: 1 // Trust first proxy (Railway)
 });
 
 // Apply rate limiting to all routes
@@ -51,30 +52,12 @@ router.get('/health', (req, res) => {
   });
 });
 
-// Face verification endpoint
-router.post('/api/verify_face', async (req, res, next) => {
-  try {
-    const { image_data } = req.body;
-    
-    if (!image_data) {
-      return res.status(400).json({
-        success: false,
-        message: 'Image data is required'
-      });
-    }
+// @route   GET /api/user/profile
+// @desc    Get user profile
+// @access  Private
+router.get('/profile', auth, userController.getUserProfile);
 
-    // Call AI service for face verification
-    const aiService = require('../services/aiService');
-    const result = await aiService.analyzeData({
-      image_data,
-      action: 'verify'
-    });
 
-    return res.json(result);
-  } catch (error) {
-    next(error);
-  }
-});
 
 // @route   GET /api/user/contacts
 // @desc    Get all emergency contacts for a user
@@ -148,6 +131,23 @@ router.get('/profile', auth, async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+});
+
+// Update logged-in user's profile
+router.post('/profile', auth, async (req, res) => {
+  try {
+    const updatedProfile = await userController.updateProfile(req);
+    res.json({
+      success: true,
+      data: updatedProfile
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   }
 });
 
