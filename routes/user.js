@@ -144,6 +144,7 @@ router.post('/profile', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating profile:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error'

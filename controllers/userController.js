@@ -46,27 +46,19 @@ exports.getUserProfile = async (req, res) => {
 // @desc    Update user profile
 // @route   POST /api/user/profile
 // @access  Private
-exports.updateProfile = async (req, res) => {
+exports.updateProfile = async (req) => {
   try {
     console.log('Request body:', req.body);
     console.log('User ID from auth:', req.user?.id);
     
     // Ensure we have a valid user ID
     if (!req.user || !req.user.id) {
-      console.error('No user ID in request');
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized'
-      });
+      throw new Error('Unauthorized: No user ID in request');
     }
 
     const user = await User.findById(req.user.id);
     if (!user) {
-      console.error('User not found for ID:', req.user.id);
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      throw new Error('User not found');
     }
 
     // Update user fields from request body
@@ -112,17 +104,11 @@ exports.updateProfile = async (req, res) => {
     };
 
     console.log('Sending response:', updatedProfile);
-    return res.json({
-      success: true,
-      data: updatedProfile
-    });
+    return updatedProfile;
   } catch (error) {
     console.error('Error in updateProfile:', error);
     console.error('Error stack:', error.stack);
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Internal server error'
-    });
+    throw error;
   }
 };
 
