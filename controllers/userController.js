@@ -48,8 +48,18 @@ exports.getUserProfile = async (req, res) => {
 // @access  Private
 exports.updateProfile = async (req, res) => {
   try {
-    console.log('Request body:', req.body); // Add debug logging
+    console.log('Request body:', req.body);
+    console.log('User ID from auth:', req.user?.id);
     
+    // Ensure we have a valid user ID
+    if (!req.user || !req.user.id) {
+      console.error('No user ID in request');
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized'
+      });
+    }
+
     const user = await User.findById(req.user.id);
     if (!user) {
       console.error('User not found for ID:', req.user.id);
@@ -60,29 +70,32 @@ exports.updateProfile = async (req, res) => {
     }
 
     // Update user fields from request body
+    // The request body should be a nested object with 'data' key
+    const updateData = req.body?.data || req.body;
+    console.log('Update data:', updateData);
+
+    // Only update fields that are provided and exist in the request
     const updateFields = {
-      name: req.body.name,
-      bloodGroup: req.body.bloodGroup,
-      medicalConditions: req.body.medicalConditions,
-      allergies: req.body.allergies,
-      pastSurgeries: req.body.pastSurgeries,
-      currentMedications: req.body.currentMedications,
-      reportFilePaths: req.body.reportFilePaths,
-      faceScanPath: req.body.faceScanPath,
-      fingerprintData: req.body.fingerprintData,
-      emergencyContacts: req.body.emergencyContacts
+      name: updateData.name,
+      bloodGroup: updateData.bloodGroup,
+      medicalConditions: updateData.medicalConditions,
+      allergies: updateData.allergies,
+      pastSurgeries: updateData.pastSurgeries,
+      currentMedications: updateData.currentMedications,
+      reportFilePaths: updateData.reportFilePaths,
+      emergencyContacts: updateData.emergencyContacts
     };
 
     // Only update fields that are provided
     Object.keys(updateFields).forEach(key => {
       if (updateFields[key] !== undefined) {
         user[key] = updateFields[key];
-        console.log(`Updating field ${key} to`, updateFields[key]); // Add debug logging
+        console.log(`Updating field ${key} to`, updateFields[key]);
       }
     });
 
     await user.save();
-    console.log('User saved successfully'); // Add debug logging
+    console.log('User saved successfully');
 
     // Format the updated profile data
     const updatedProfile = {
@@ -93,20 +106,20 @@ exports.updateProfile = async (req, res) => {
       bloodGroup: user.bloodGroup,
       medicalConditions: user.medicalConditions,
       allergies: user.allergies,
-      pastSurges: user.pastSurgeries,
+      pastSurgeries: user.pastSurgeries,
       currentMedications: user.currentMedications,
       emergencyContacts: user.emergencyContacts
     };
 
-    console.log('Sending response:', updatedProfile); // Add debug logging
-    res.json({
+    console.log('Sending response:', updatedProfile);
+    return res.json({
       success: true,
       data: updatedProfile
     });
   } catch (error) {
     console.error('Error in updateProfile:', error);
     console.error('Error stack:', error.stack);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message || 'Internal server error'
     });
