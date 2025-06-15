@@ -12,7 +12,8 @@ const limiter = rateLimit({
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'
-  }
+  },
+  trustProxy: true // Enable proxy trust for Railway deployment
 });
 
 // Apply rate limiting to all routes
@@ -54,17 +55,7 @@ router.get('/health', (req, res) => {
 // @route   GET /api/user/profile
 // @desc    Get user profile
 // @access  Private
-router.get('/profile', auth, async (req, res, next) => {
-  try {
-    const user = await userController.getUserProfile(req);
-    res.json({
-      success: true,
-      data: user
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+router.get('/profile', auth, userController.getUserProfile);
 
 // Face verification endpoint
 router.post('/api/verify_face', async (req, res, next) => {

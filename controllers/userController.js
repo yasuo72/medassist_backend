@@ -3,11 +3,17 @@ const User = require('../models/User');
 // @desc    Get user profile
 // @route   GET /api/user/profile
 // @access  Private
-exports.getUserProfile = async (req) => {
+// @desc    Get user profile
+// @route   GET /api/user/profile
+// @access  Private
+exports.getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) {
-      throw new Error('User not found');
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
     }
 
     // Format the profile data
@@ -24,9 +30,16 @@ exports.getUserProfile = async (req) => {
       emergencyContacts: user.emergencyContacts
     };
 
-    return profile;
+    return res.json({
+      success: true,
+      data: profile
+    });
   } catch (error) {
-    throw error;
+    console.error('Error getting user profile:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   }
 };
 
