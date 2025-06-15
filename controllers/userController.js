@@ -104,7 +104,10 @@ exports.updateProfile = async (req) => {
     };
 
     console.log('Sending response:', updatedProfile);
-    return updatedProfile;
+    return {
+      success: true,
+      data: updatedProfile
+    };
   } catch (error) {
     console.error('Error in updateProfile:', error);
     console.error('Error stack:', error.stack);
