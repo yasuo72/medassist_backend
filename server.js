@@ -4,6 +4,7 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const passport = require('passport');
 const session = require('express-session');
+const RedisStore = require('connect-redis')(session);
 const path = require('path');
 
 // Passport Config
@@ -27,13 +28,24 @@ app.use('/app/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Express Session Middleware
 // This is required for the Google OAuth flow
-app.use(
-  session({
-    secret: 'keyboard cat', // TODO: Move to .env
-    resave: false,
-    saveUninitialized: false,
-  })
-);
+const sessionConfig = {
+  secret: process.env.SESSION_SECRET || 'keyboard cat',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24 // 24 hours
+  }
+};
+
+if (process.env.NODE_ENV === 'production') {
+  sessionConfig.store = new RedisStore({
+    url: process.env.REDIS_URL || 'redis://localhost:6379'
+  });
+}
+
+app.use(session(sessionConfig));
 
 // Passport Middleware
 app.use(passport.initialize());
