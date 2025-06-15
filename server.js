@@ -42,7 +42,9 @@ const sessionConfig = {
 if (process.env.NODE_ENV === 'production') {
   sessionConfig.store = new RedisStore({
     url: process.env.REDIS_URL || 'redis://localhost:6379',
-    client: require('redis').createClient()
+    client: require('redis').createClient({
+      url: process.env.REDIS_URL || 'redis://localhost:6379'
+    })
   });
 }
 
