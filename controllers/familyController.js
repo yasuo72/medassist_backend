@@ -134,3 +134,20 @@ exports.uploadSummary = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// @desc    Public get summary URL by emergencyId
+// @route   GET /api/family/summary/:emergencyId
+// @access  Public
+exports.getSummaryByEmergencyId = async (req, res) => {
+  try {
+    const { emergencyId } = req.params;
+    const member = await FamilyMember.findOne({ emergencyId });
+    if (!member || !member.summaryUrl) {
+      return res.status(404).json({ success: false, message: 'Summary not found' });
+    }
+    res.json({ success: true, url: member.summaryUrl });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+};
