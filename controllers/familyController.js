@@ -5,7 +5,7 @@ const User = require('../models/User');
 // @route   POST /api/family
 // @access  Private
 exports.addFamilyMember = async (req, res) => {
-  const { name, relationship, dateOfBirth, bloodGroup, allergies, medicalConditions } = req.body;
+  const { name, relation, dateOfBirth, bloodGroup, allergies, medicalConditions } = req.body;
 
   const resolvedRelationship = relationship || relation;
 
@@ -53,12 +53,12 @@ exports.getFamilyMembers = async (req, res) => {
 // @route   PUT /api/family/:id
 // @access  Private
 exports.updateFamilyMember = async (req, res) => {
-  const { name, relationship, dateOfBirth, bloodGroup, allergies, medicalConditions } = req.body;
+  const { name, relation, dateOfBirth, bloodGroup, allergies, medicalConditions } = req.body;
 
   // Build a fields object to update
   const memberFields = {};
   if (name) memberFields.name = name;
-  if (relationship) memberFields.relationship = relationship;
+  if (relation) memberFields.relationship = relation;
   if (dateOfBirth) memberFields.dateOfBirth = dateOfBirth;
   if (bloodGroup) memberFields.bloodGroup = bloodGroup;
   if (allergies) memberFields.allergies = allergies;
