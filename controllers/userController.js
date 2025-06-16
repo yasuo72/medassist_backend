@@ -117,27 +117,28 @@ exports.updateProfile = async (req) => {
 // @desc    Get all emergency contacts for a user
 // @route   GET /api/user/contacts
 // @access  Private
-exports.getEmergencyContacts = async (req, res) => {
+// Return all emergency contacts for current user (routes will handle response)
+exports.getEmergencyContacts = async (req) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) {
-      return res.status(404).json({ msg: 'User not found' });
+      throw new Error('User not found');
     }
-    res.json(user.emergencyContacts);
+    return user.emergencyContacts; // array
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    throw err;
   }
 };
 
 // @desc    Add an emergency contact
 // @route   POST /api/user/contacts
 // @access  Private
-exports.addEmergencyContact = async (req, res) => {
+exports.addEmergencyContact = async (req) => {
   const { name, phone, relationship, isPriority = false, shareMedicalSummary = false } = req.body;
 
   if (!name || !phone || !relationship) {
-    return res.status(400).json({ msg: 'Please provide name, phone, and relationship' });
+    throw new Error('Please provide name, phone, and relationship');
   }
 
   const newContact = { name, phone, relationship, isPriority, shareMedicalSummary };
@@ -150,17 +151,17 @@ exports.addEmergencyContact = async (req, res) => {
 
     user.emergencyContacts.push(newContact);
     await user.save();
-    res.json(user.emergencyContacts);
+    return newContact;
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    throw err;
   }
 };
 
 // @desc    Delete an emergency contact
 // @route   DELETE /api/user/contacts/:contactId
 // @access  Private
-exports.deleteEmergencyContact = async (req, res) => {
+exports.deleteEmergencyContact = async (req) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) {
@@ -173,22 +174,22 @@ exports.deleteEmergencyContact = async (req, res) => {
     );
 
     if (removeIndex === -1) {
-      return res.status(404).json({ msg: 'Contact not found' });
+      throw new Error('Contact not found');
     }
 
     user.emergencyContacts.splice(removeIndex, 1);
     await user.save();
-    res.json(user.emergencyContacts);
+    return true;
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    throw err;
   }
 };
 
 // @desc    Update an emergency contact
 // @route   PUT /api/user/contacts/:contactId
 // @access  Private
-exports.updateEmergencyContact = async (req, res) => {
+exports.updateEmergencyContact = async (req) => {
   const { name, phone, relationship, isPriority, shareMedicalSummary } = req.body;
 
   try {
@@ -199,7 +200,7 @@ exports.updateEmergencyContact = async (req, res) => {
 
     const contact = user.emergencyContacts.id(req.params.contactId);
     if (!contact) {
-      return res.status(404).json({ msg: 'Contact not found' });
+      throw new Error('Contact not found');
     }
 
     if (name) contact.name = name;
@@ -212,7 +213,7 @@ exports.updateEmergencyContact = async (req, res) => {
     res.json(user.emergencyContacts);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    throw err;
   }
 };
 
