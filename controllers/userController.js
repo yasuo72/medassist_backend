@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const FamilyMember = require('../models/FamilyMember');
 
 // @desc    Get user profile
 // @route   GET /api/user/profile
@@ -235,6 +236,12 @@ exports.setEmergencyId = async (req) => {
     { new: true }
   ).select('emergencyId');
   if (!user) throw new Error('User not found');
+  // Also propagate the change to the guardian\'s own FamilyMember record if it exists
+  try {
+    await FamilyMember.updateMany({ guardian: req.user.id }, { emergencyId });
+  } catch (err) {
+    console.error('Failed to sync FamilyMember emergencyId:', err.message);
+  }
   return user.emergencyId;
 };
 
