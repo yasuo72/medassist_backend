@@ -29,6 +29,9 @@ const FamilyMemberSchema = new Schema({
     type: [String],
     default: [],
   },
+  medicalTag: {
+    type: String,
+  },
   faceEmbedding: {
     type: String, // Stored as a base64 string or a hash
   },
