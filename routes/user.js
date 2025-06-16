@@ -62,7 +62,7 @@ router.get('/profile', auth, userController.getUserProfile);
 // @route   GET /api/user/contacts
 // @desc    Get all emergency contacts for a user
 // @access  Private
-router.get('/contacts', auth, async (req, res) => {
+router.get('/contacts', auth, async (req, res, next) => {
   try {
     const contacts = await userController.getEmergencyContacts(req);
     res.json({
