@@ -7,6 +7,8 @@ const User = require('../models/User');
 exports.addFamilyMember = async (req, res) => {
   const { name, relationship, dateOfBirth, bloodGroup, allergies, medicalConditions } = req.body;
 
+  const resolvedRelationship = relationship || relation;
+
   // Basic validation
   if (!name || !resolvedRelationship) {
     return res.status(400).json({ msg: 'Name and relationship are required' });
