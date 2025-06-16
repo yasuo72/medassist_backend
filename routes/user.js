@@ -52,6 +52,23 @@ router.get('/health', (req, res) => {
   });
 });
 
+// ===== Emergency ID Routes =====
+// GET current user's emergency ID
+router.get('/emergency-id', auth, async (req, res, next) => {
+  try {
+    const id = await userController.getEmergencyId(req);
+    res.json({ success: true, data: id });
+  } catch (err) { next(err); }
+});
+
+// POST set/update emergency ID
+router.post('/emergency-id', auth, async (req, res, next) => {
+  try {
+    const id = await userController.setEmergencyId(req);
+    res.json({ success: true, data: id });
+  } catch (err) { next(err); }
+});
+
 // @route   GET /api/user/profile
 // @desc    Get user profile
 // @access  Private

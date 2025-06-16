@@ -217,6 +217,27 @@ exports.updateEmergencyContact = async (req) => {
   }
 };
 
+// ===== Emergency ID Handlers =====
+// Get logged-in user's Emergency ID
+exports.getEmergencyId = async (req) => {
+  const user = await User.findById(req.user.id).select('emergencyId');
+  if (!user) throw new Error('User not found');
+  return user.emergencyId || null;
+};
+
+// Set or update Emergency ID for logged-in user
+exports.setEmergencyId = async (req) => {
+  const { emergencyId } = req.body;
+  if (!emergencyId) throw new Error('Missing emergencyId');
+  const user = await User.findByIdAndUpdate(
+    req.user.id,
+    { emergencyId },
+    { new: true }
+  ).select('emergencyId');
+  if (!user) throw new Error('User not found');
+  return user.emergencyId;
+};
+
 
 
 

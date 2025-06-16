@@ -20,6 +20,8 @@ router.post('/', auth, familyController.addFamilyMember);
 
 // Upload medical summary
 router.post('/summary', auth, upload.single('file'), familyController.uploadSummary);
+// Public fetch summary by emergencyId (no auth required)
+router.get('/summary/:emergencyId', familyController.getSummaryByEmergencyId);
 
 // @route   GET /api/family
 // @desc    Get all family members for a user

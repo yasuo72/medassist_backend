@@ -32,6 +32,14 @@ const FamilyMemberSchema = new Schema({
   medicalTag: {
     type: String,
   },
+  emergencyId: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
+  summaryUrl: {
+    type: String,
+  },
   faceEmbedding: {
     type: String, // Stored as a base64 string or a hash
   },
