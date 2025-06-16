@@ -121,18 +121,7 @@ router.put('/contacts/:contactId', auth, async (req, res, next) => {
 //  Profile Routes
 // =========================
 
-// Get logged-in user's profile
-router.get('/profile', auth, async (req, res, next) => {
-  try {
-    const profile = await userController.getProfile(req);
-    res.json({
-      success: true,
-      data: profile
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+
 
 // Update logged-in user's profile
 router.post('/profile', auth, async (req, res) => {

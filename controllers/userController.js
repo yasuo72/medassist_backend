@@ -216,60 +216,6 @@ exports.updateEmergencyContact = async (req, res) => {
   }
 };
 
-// =========================
-//  Profile CRUD Endpoints
-// =========================
 
-// @desc    Get logged-in user's profile (medical + basic)
-// @route   GET /api/user/profile
-// @access  Private
-exports.getProfile = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select('-password'); // exclude password
-    if (!user) return res.status(404).json({ msg: 'User not found' });
 
-    res.json(user);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
-};
 
-// @desc    Create / update medical profile for the logged-in user
-// @route   POST /api/user/profile
-// @access  Private
-exports.updateProfile = async (req, res) => {
-  const {
-    name,
-    bloodGroup,
-    medicalConditions,
-    allergies,
-    pastSurgeries,
-    currentMedications,
-    reportFilePaths,
-    faceEmbedding,
-    fingerprintHash,
-  } = req.body;
-
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ msg: 'User not found' });
-
-    // Update basic + medical fields only if provided
-    if (name !== undefined) user.name = name;
-    if (bloodGroup !== undefined) user.bloodGroup = bloodGroup;
-    if (medicalConditions !== undefined) user.medicalConditions = medicalConditions;
-    if (allergies !== undefined) user.allergies = allergies;
-    if (pastSurgeries !== undefined) user.pastSurgeries = pastSurgeries;
-    if (currentMedications !== undefined) user.currentMedications = currentMedications;
-    if (reportFilePaths !== undefined) user.reportFilePaths = reportFilePaths;
-    if (faceEmbedding !== undefined) user.faceEmbedding = faceEmbedding;
-    if (fingerprintHash !== undefined) user.fingerprintHash = fingerprintHash;
-
-    await user.save();
-    res.json(user);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
-};
