@@ -27,7 +27,7 @@ exports.addFamilyMember = async (req, res) => {
     });
 
     const familyMember = await newFamilyMember.save();
-    res.json(familyMember);
+    res.json({ success: true, data: familyMember });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -40,7 +40,7 @@ exports.addFamilyMember = async (req, res) => {
 exports.getFamilyMembers = async (req, res) => {
   try {
     const familyMembers = await FamilyMember.find({ guardian: req.user.id }).sort({ createdAt: -1 });
-    res.json(familyMembers);
+    res.json({ success: true, data: familyMembers });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -105,7 +105,7 @@ exports.deleteFamilyMember = async (req, res) => {
 
     await FamilyMember.findByIdAndDelete(req.params.id);
 
-    res.json({ msg: 'Family member removed' });
+    res.json({ success: true, message: 'Family member removed' });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
