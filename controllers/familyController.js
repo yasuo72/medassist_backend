@@ -8,7 +8,7 @@ exports.addFamilyMember = async (req, res) => {
   const { name, relationship, dateOfBirth, bloodGroup, allergies, medicalConditions } = req.body;
 
   // Basic validation
-  if (!name || !relationship) {
+  if (!name || !resolvedRelationship) {
     return res.status(400).json({ msg: 'Name and relationship are required' });
   }
 
@@ -16,7 +16,10 @@ exports.addFamilyMember = async (req, res) => {
     const newFamilyMember = new FamilyMember({
       guardian: req.user.id,
       name,
-      relationship,
+      relationship: resolvedRelationship,
+      medicalTag,
+      age,
+      gender,
       dateOfBirth,
       bloodGroup,
       allergies,
@@ -106,5 +109,21 @@ exports.deleteFamilyMember = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
+  }
+};
+
+// @desc    Upload medical summary (PDF/Image)
+// @route   POST /api/family/summary
+// @access  Private
+exports.uploadSummary = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'file is required' });
+    }
+    const fileUrl = `${process.env.BASE_URL || req.protocol + '://' + req.get('host')}/uploads/${req.file.filename}`;
+    res.json({ success: true, url: fileUrl });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'Server error' });
   }
 };
