@@ -5,11 +5,12 @@ const User = require('../models/User');
 // @route   POST /api/family
 // @access  Private
 exports.addFamilyMember = async (req, res) => {
-  const { name, relation, dateOfBirth, bloodGroup, allergies, medicalConditions } = req.body;
+  const { name, relationship, relation, dateOfBirth, bloodGroup, allergies, medicalConditions } = req.body;
 
-  const resolvedRelationship = relationship || relation;
+  // Accept either 'relationship' or deprecated 'relation' field from client
+    const resolvedRelationship = relationship || relation;
 
-  // Basic validation
+    // Basic validation
   if (!name || !resolvedRelationship) {
     return res.status(400).json({ msg: 'Name and relationship are required' });
   }
@@ -19,13 +20,11 @@ exports.addFamilyMember = async (req, res) => {
       guardian: req.user.id,
       name,
       relationship: resolvedRelationship,
-      medicalTag,
-      age,
-      gender,
       dateOfBirth,
       bloodGroup,
       allergies,
       medicalConditions,
+      medicalTag,
     });
 
     const familyMember = await newFamilyMember.save();
@@ -53,12 +52,13 @@ exports.getFamilyMembers = async (req, res) => {
 // @route   PUT /api/family/:id
 // @access  Private
 exports.updateFamilyMember = async (req, res) => {
-  const { name, relation, dateOfBirth, bloodGroup, allergies, medicalConditions } = req.body;
+  const { name, relationship, relation, dateOfBirth, bloodGroup, allergies, medicalConditions } = req.body;
 
   // Build a fields object to update
   const memberFields = {};
   if (name) memberFields.name = name;
-  if (relation) memberFields.relationship = relation;
+    if (relationship) memberFields.relationship = relationship;
+  if (!relationship && relation) memberFields.relationship = relation;
   if (dateOfBirth) memberFields.dateOfBirth = dateOfBirth;
   if (bloodGroup) memberFields.bloodGroup = bloodGroup;
   if (allergies) memberFields.allergies = allergies;
