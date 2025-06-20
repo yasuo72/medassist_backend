@@ -5,10 +5,13 @@ const User = require('../models/User');
 // @route   POST /api/family
 // @access  Private
 exports.addFamilyMember = async (req, res) => {
-  const { name, relationship, dateOfBirth, bloodGroup, allergies, medicalConditions } = req.body;
+  const { name, relationship, relation, medicalTag, emergencyId, summaryUrl, dateOfBirth, bloodGroup, allergies, medicalConditions } = req.body;
 
-  // Basic validation
-  if (!name || !relationship) {
+  // Accept either 'relationship' or deprecated 'relation' field from client
+    const resolvedRelationship = relationship || relation;
+
+    // Basic validation
+  if (!name || !resolvedRelationship) {
     return res.status(400).json({ msg: 'Name and relationship are required' });
   }
 
@@ -16,15 +19,18 @@ exports.addFamilyMember = async (req, res) => {
     const newFamilyMember = new FamilyMember({
       guardian: req.user.id,
       name,
-      relationship,
+      relationship: resolvedRelationship,
       dateOfBirth,
       bloodGroup,
       allergies,
       medicalConditions,
+      emergencyId,
+      summaryUrl,
+      medicalTag,
     });
 
     const familyMember = await newFamilyMember.save();
-    res.json(familyMember);
+    res.json({ success: true, data: familyMember });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -37,7 +43,7 @@ exports.addFamilyMember = async (req, res) => {
 exports.getFamilyMembers = async (req, res) => {
   try {
     const familyMembers = await FamilyMember.find({ guardian: req.user.id }).sort({ createdAt: -1 });
-    res.json(familyMembers);
+    res.json({ success: true, data: familyMembers });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -48,16 +54,20 @@ exports.getFamilyMembers = async (req, res) => {
 // @route   PUT /api/family/:id
 // @access  Private
 exports.updateFamilyMember = async (req, res) => {
-  const { name, relationship, dateOfBirth, bloodGroup, allergies, medicalConditions } = req.body;
+  const { name, relationship, relation, medicalTag, emergencyId, summaryUrl, dateOfBirth, bloodGroup, allergies, medicalConditions } = req.body;
 
   // Build a fields object to update
   const memberFields = {};
   if (name) memberFields.name = name;
-  if (relationship) memberFields.relationship = relationship;
+    if (relationship) memberFields.relationship = relationship;
+  if (!relationship && relation) memberFields.relationship = relation;
   if (dateOfBirth) memberFields.dateOfBirth = dateOfBirth;
   if (bloodGroup) memberFields.bloodGroup = bloodGroup;
   if (allergies) memberFields.allergies = allergies;
   if (medicalConditions) memberFields.medicalConditions = medicalConditions;
+  if (medicalTag) memberFields.medicalTag = medicalTag;
+  if (emergencyId) memberFields.emergencyId = emergencyId;
+  if (summaryUrl) memberFields.summaryUrl = summaryUrl;
 
   try {
     let member = await FamilyMember.findById(req.params.id);
@@ -102,7 +112,40 @@ exports.deleteFamilyMember = async (req, res) => {
 
     await FamilyMember.findByIdAndDelete(req.params.id);
 
-    res.json({ msg: 'Family member removed' });
+    res.json({ success: true, message: 'Family member removed' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+};
+
+// @desc    Upload medical summary (PDF/Image)
+// @route   POST /api/family/summary
+// @access  Private
+exports.uploadSummary = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'file is required' });
+    }
+    const fileUrl = `${process.env.BASE_URL || req.protocol + '://' + req.get('host')}/uploads/${req.file.filename}`;
+    res.json({ success: true, url: fileUrl });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Public get summary URL by emergencyId
+// @route   GET /api/family/summary/:emergencyId
+// @access  Public
+exports.getSummaryByEmergencyId = async (req, res) => {
+  try {
+    const { emergencyId } = req.params;
+    const member = await FamilyMember.findOne({ emergencyId });
+    if (!member || !member.summaryUrl) {
+      return res.status(404).json({ success: false, message: 'Summary not found' });
+    }
+    res.json({ success: true, url: member.summaryUrl });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');

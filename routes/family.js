@@ -1,12 +1,27 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
+
+const storage = multer.diskStorage({
+  destination: path.join(__dirname, '..', 'uploads'),
+  filename: (_req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
+const upload = multer({ storage });
 const familyController = require('../controllers/familyController');
 
 // @route   POST /api/family
 // @desc    Add a new family member
 // @access  Private
 router.post('/', auth, familyController.addFamilyMember);
+
+// Upload medical summary
+router.post('/summary', auth, upload.single('file'), familyController.uploadSummary);
+// Public fetch summary by emergencyId (no auth required)
+router.get('/summary/:emergencyId', familyController.getSummaryByEmergencyId);
 
 // @route   GET /api/family
 // @desc    Get all family members for a user

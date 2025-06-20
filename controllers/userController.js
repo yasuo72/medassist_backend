@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const FamilyMember = require('../models/FamilyMember');
 
 // @desc    Get user profile
 // @route   GET /api/user/profile
@@ -46,27 +47,19 @@ exports.getUserProfile = async (req, res) => {
 // @desc    Update user profile
 // @route   POST /api/user/profile
 // @access  Private
-exports.updateProfile = async (req, res) => {
+exports.updateProfile = async (req) => {
   try {
     console.log('Request body:', req.body);
     console.log('User ID from auth:', req.user?.id);
     
     // Ensure we have a valid user ID
     if (!req.user || !req.user.id) {
-      console.error('No user ID in request');
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized'
-      });
+      throw new Error('Unauthorized: No user ID in request');
     }
 
     const user = await User.findById(req.user.id);
     if (!user) {
-      console.error('User not found for ID:', req.user.id);
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      throw new Error('User not found');
     }
 
     // Update user fields from request body
@@ -112,17 +105,11 @@ exports.updateProfile = async (req, res) => {
     };
 
     console.log('Sending response:', updatedProfile);
-    return res.json({
-      success: true,
-      data: updatedProfile
-    });
+    return updatedProfile;
   } catch (error) {
     console.error('Error in updateProfile:', error);
     console.error('Error stack:', error.stack);
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Internal server error'
-    });
+    throw error;
   }
 };
 
@@ -131,27 +118,28 @@ exports.updateProfile = async (req, res) => {
 // @desc    Get all emergency contacts for a user
 // @route   GET /api/user/contacts
 // @access  Private
-exports.getEmergencyContacts = async (req, res) => {
+// Return all emergency contacts for current user (routes will handle response)
+exports.getEmergencyContacts = async (req) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) {
-      return res.status(404).json({ msg: 'User not found' });
+      throw new Error('User not found');
     }
-    res.json(user.emergencyContacts);
+    return user.emergencyContacts; // array
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    throw err;
   }
 };
 
 // @desc    Add an emergency contact
 // @route   POST /api/user/contacts
 // @access  Private
-exports.addEmergencyContact = async (req, res) => {
+exports.addEmergencyContact = async (req) => {
   const { name, phone, relationship, isPriority = false, shareMedicalSummary = false } = req.body;
 
   if (!name || !phone || !relationship) {
-    return res.status(400).json({ msg: 'Please provide name, phone, and relationship' });
+    throw new Error('Please provide name, phone, and relationship');
   }
 
   const newContact = { name, phone, relationship, isPriority, shareMedicalSummary };
@@ -164,17 +152,17 @@ exports.addEmergencyContact = async (req, res) => {
 
     user.emergencyContacts.push(newContact);
     await user.save();
-    res.json(user.emergencyContacts);
+    return newContact;
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    throw err;
   }
 };
 
 // @desc    Delete an emergency contact
 // @route   DELETE /api/user/contacts/:contactId
 // @access  Private
-exports.deleteEmergencyContact = async (req, res) => {
+exports.deleteEmergencyContact = async (req) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) {
@@ -187,22 +175,22 @@ exports.deleteEmergencyContact = async (req, res) => {
     );
 
     if (removeIndex === -1) {
-      return res.status(404).json({ msg: 'Contact not found' });
+      throw new Error('Contact not found');
     }
 
     user.emergencyContacts.splice(removeIndex, 1);
     await user.save();
-    res.json(user.emergencyContacts);
+    return true;
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    throw err;
   }
 };
 
 // @desc    Update an emergency contact
 // @route   PUT /api/user/contacts/:contactId
 // @access  Private
-exports.updateEmergencyContact = async (req, res) => {
+exports.updateEmergencyContact = async (req) => {
   const { name, phone, relationship, isPriority, shareMedicalSummary } = req.body;
 
   try {
@@ -213,7 +201,7 @@ exports.updateEmergencyContact = async (req, res) => {
 
     const contact = user.emergencyContacts.id(req.params.contactId);
     if (!contact) {
-      return res.status(404).json({ msg: 'Contact not found' });
+      throw new Error('Contact not found');
     }
 
     if (name) contact.name = name;
@@ -226,64 +214,37 @@ exports.updateEmergencyContact = async (req, res) => {
     res.json(user.emergencyContacts);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    throw err;
   }
 };
 
-// =========================
-//  Profile CRUD Endpoints
-// =========================
+// ===== Emergency ID Handlers =====
+// Get logged-in user's Emergency ID
+exports.getEmergencyId = async (req) => {
+  const user = await User.findById(req.user.id).select('emergencyId');
+  if (!user) throw new Error('User not found');
+  return user.emergencyId || null;
+};
 
-// @desc    Get logged-in user's profile (medical + basic)
-// @route   GET /api/user/profile
-// @access  Private
-exports.getProfile = async (req, res) => {
+// Set or update Emergency ID for logged-in user
+exports.setEmergencyId = async (req) => {
+  const { emergencyId } = req.body;
+  if (!emergencyId) throw new Error('Missing emergencyId');
+  const user = await User.findByIdAndUpdate(
+    req.user.id,
+    { emergencyId },
+    { new: true }
+  ).select('emergencyId');
+  if (!user) throw new Error('User not found');
+  // Also propagate the change to the guardian\'s own FamilyMember record if it exists
   try {
-    const user = await User.findById(req.user.id).select('-password'); // exclude password
-    if (!user) return res.status(404).json({ msg: 'User not found' });
-
-    res.json(user);
+    await FamilyMember.updateMany({ guardian: req.user.id }, { emergencyId });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('Failed to sync FamilyMember emergencyId:', err.message);
   }
+  return user.emergencyId;
 };
 
-// @desc    Create / update medical profile for the logged-in user
-// @route   POST /api/user/profile
-// @access  Private
-exports.updateProfile = async (req, res) => {
-  const {
-    name,
-    bloodGroup,
-    medicalConditions,
-    allergies,
-    pastSurgeries,
-    currentMedications,
-    reportFilePaths,
-    faceEmbedding,
-    fingerprintHash,
-  } = req.body;
 
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ msg: 'User not found' });
 
-    // Update basic + medical fields only if provided
-    if (name !== undefined) user.name = name;
-    if (bloodGroup !== undefined) user.bloodGroup = bloodGroup;
-    if (medicalConditions !== undefined) user.medicalConditions = medicalConditions;
-    if (allergies !== undefined) user.allergies = allergies;
-    if (pastSurgeries !== undefined) user.pastSurgeries = pastSurgeries;
-    if (currentMedications !== undefined) user.currentMedications = currentMedications;
-    if (reportFilePaths !== undefined) user.reportFilePaths = reportFilePaths;
-    if (faceEmbedding !== undefined) user.faceEmbedding = faceEmbedding;
-    if (fingerprintHash !== undefined) user.fingerprintHash = fingerprintHash;
 
-    await user.save();
-    res.json(user);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
-};
