@@ -9,7 +9,7 @@ exports.uploadMiddleware = upload.single('image');
 
 // Helper: forward multipart data to Python DeepFace service
 async function forwardToPythonIdentify(req) {
-  return axios.post((process.env.FACE_SERVICE_URL || 'http://127.0.0.1:8000') + '/face/identify', req.file.buffer, {
+  return axios.post((process.env.FACE_SERVICE_URL || 'http://127.0.0.1:8000') + '/face/identify', imageBuffer, {
     headers: {
       'Content-Type': 'application/octet-stream',
       'Content-Disposition': `form-data; name="image"; filename="capture.jpg"`
@@ -29,7 +29,7 @@ exports.register = async (req, res) => {
     // forward to python register
     const formData = new FormData();
     formData.append('emergency_id', emergencyId);
-    formData.append('image', req.file.buffer, 'capture.jpg');
+    formData.append('image', imageBuffer, 'capture.jpg');
     if (profileJson) formData.append('profile_json', profileJson);
 
     const pythonResp = await axios.post((process.env.FACE_SERVICE_URL || 'http://127.0.0.1:8000') + '/face/register', formData, {
@@ -63,7 +63,13 @@ exports.register = async (req, res) => {
 
 exports.identify = async (req, res) => {
   try {
-    if (!req.file) {
+    let imageBuffer;
+    if (req.file) {
+      imageBuffer = req.file.buffer;
+    } else if (req.body.image_data) {
+      imageBuffer = Buffer.from(req.body.image_data.split(',').pop(), 'base64');
+    }
+    if (!imageBuffer) {
       return res.status(400).json({ error: 'image file is required' });
     }
 
