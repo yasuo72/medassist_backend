@@ -16,6 +16,8 @@
   },
   "description": "",
   "dependencies": {
+    "form-data": "^4.0.0",
+    "axios": "^1.6.8",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
