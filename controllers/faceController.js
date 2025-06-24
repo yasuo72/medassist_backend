@@ -20,12 +20,18 @@ exports.uploadMiddleware = upload.single('image');
 
 // Helper: forward multipart data to Python DeepFace service
 async function forwardToPythonIdentify(imageBuffer) {
-    const url = buildFaceServiceUrl('/face/identify');
-  return axios.post(url, imageBuffer, {
-    headers: {
-      'Content-Type': 'application/octet-stream',
-      'Content-Disposition': `form-data; name="image"; filename="capture.jpg"`
-    },
+  const url = buildFaceServiceUrl('/face/identify');
+  const form = new FormData();
+  form.append('image', imageBuffer, 'capture.jpg');
+
+  const headers = {
+    ...form.getHeaders(),
+    // Allow large images
+    'Content-Length': form.getLengthSync()
+  };
+
+  return axios.post(url, form, {
+    headers,
     maxContentLength: Infinity,
     maxBodyLength: Infinity,
   }).then(r => r.data);
