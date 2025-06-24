@@ -69,7 +69,7 @@ exports.register = async (req, res) => {
     // upsert user in Mongo
     const profile = profileJson ? JSON.parse(profileJson) : {};
 
-    await User.findOneAndUpdate(
+    const savedUser = await User.findOneAndUpdate(
       { emergencyId },
       {
         name: profile.name || 'Unknown',
@@ -82,7 +82,15 @@ exports.register = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    res.json(pythonResp);
+    // Build or reuse QR URL for emergency profile
+    const frontend = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const qrUrl = `${frontend}/emergency/view/${emergencyId}`;
+    if (!savedUser.qrUrl) {
+      savedUser.qrUrl = qrUrl;
+      await savedUser.save();
+    }
+
+    res.json({ ...pythonResp, qrUrl });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Face register failed' });
@@ -123,5 +131,22 @@ exports.identify = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Face identify failed' });
+  }
+};
+
+// GET /api/face/status/:emergencyId – returns { modelExists: boolean }
+exports.status = async (req, res) => {
+  try {
+    const { emergencyId } = req.params;
+    if (!emergencyId) {
+      return res.status(400).json({ error: 'emergencyId is required' });
+    }
+
+    const user = await User.findOne({ emergencyId });
+    const modelExists = !!(user && user.faceEmbedding);
+    res.json({ modelExists });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch face status' });
   }
 };
