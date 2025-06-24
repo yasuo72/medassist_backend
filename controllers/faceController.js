@@ -139,12 +139,7 @@ exports.identify = async (req, res) => {
       currentMedications: user.currentMedications,
     };
 
-    res.json({ 
-      match: true, 
-      similarity: pythonResp.similarity, 
-      user: profile,  // Move profile under 'user' key for frontend
-      success: true
-    });
+    res.json({ match: true, similarity: pythonResp.similarity, profile });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Face identify failed' });
