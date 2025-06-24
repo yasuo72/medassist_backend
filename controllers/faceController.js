@@ -21,9 +21,24 @@ async function forwardToPythonIdentify(req) {
 
 exports.register = async (req, res) => {
   try {
-    const { emergencyId, profileJson } = req.body;
-    if (!emergencyId || !req.file) {
-      return res.status(400).json({ error: 'emergencyId and image are required' });
+    // Accept either emergencyId (preferred) or user_id (legacy mobile key)
+    const emergencyId = req.body.emergencyId || req.body.user_id;
+    const { profileJson } = req.body;
+
+    // Extract image buffer: multipart upload (req.file) OR base64 JSON field
+    let imageBuffer;
+    if (req.file) {
+      imageBuffer = req.file.buffer;
+    } else if (req.body.image_data) {
+      // Expect data URI or raw base64 string
+      const base64 = req.body.image_data.split(',').pop();
+      imageBuffer = Buffer.from(base64, 'base64');
+    }
+
+    if (!emergencyId || !imageBuffer) {
+      return res
+        .status(400)
+        .json({ error: 'emergencyId/user_id and image are required' });
     }
 
     // forward to python register
