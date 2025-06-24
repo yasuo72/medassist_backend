@@ -59,7 +59,8 @@ exports.register = async (req, res) => {
     formData.append('image', imageBuffer, 'capture.jpg');
     if (profileJson) formData.append('profile_json', profileJson);
 
-    const pythonResp = await axios.post((process.env.FACE_SERVICE_URL || 'http://127.0.0.1:8000') + '/face/register', formData, {
+        const registerUrl = buildFaceServiceUrl('/face/register');
+    const pythonResp = await axios.post(registerUrl, formData, {
       headers: formData.getHeaders(),
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
