@@ -3,13 +3,25 @@ const multer = require('multer');
 const FormData = require('form-data');
 const User = require('../models/User');
 
+// Helper to build full URL even if env lacks protocol
+function buildFaceServiceUrl(path) {
+  let base = process.env.FACE_SERVICE_URL || 'http://127.0.0.1:8000';
+  if (!base.startsWith('http://') && !base.startsWith('https://')) {
+    base = `https://${base}`; // default to https if protocol missing
+  }
+  // Ensure no trailing slash duplication
+  if (base.endsWith('/')) base = base.slice(0, -1);
+  return `${base}${path}`;
+}
+
 // Memory storage – incoming image stays in RAM and is forwarded as-is to Python
 const upload = multer();
 exports.uploadMiddleware = upload.single('image');
 
 // Helper: forward multipart data to Python DeepFace service
-async function forwardToPythonIdentify(req) {
-  return axios.post((process.env.FACE_SERVICE_URL || 'http://127.0.0.1:8000') + '/face/identify', imageBuffer, {
+async function forwardToPythonIdentify(imageBuffer) {
+    const url = buildFaceServiceUrl('/face/identify');
+  return axios.post(url, imageBuffer, {
     headers: {
       'Content-Type': 'application/octet-stream',
       'Content-Disposition': `form-data; name="image"; filename="capture.jpg"`
@@ -88,7 +100,7 @@ exports.identify = async (req, res) => {
       return res.status(400).json({ error: 'image file is required' });
     }
 
-    const pythonResp = await forwardToPythonIdentify(req);
+    const pythonResp = await forwardToPythonIdentify(imageBuffer);
     if (!pythonResp.match) return res.json({ match: false });
 
     // Look up emergency profile in Mongo by emergency_id
