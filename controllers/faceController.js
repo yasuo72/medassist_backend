@@ -1,5 +1,6 @@
 const axios = require('axios');
 const multer = require('multer');
+const { v4: uuidv4 } = require('uuid');
 const FormData = require('form-data');
 const User = require('../models/User');
 
@@ -16,7 +17,8 @@ function buildFaceServiceUrl(path) {
 
 // Memory storage – incoming image stays in RAM and is forwarded as-is to Python
 const upload = multer();
-exports.uploadMiddleware = upload.single('image');
+// accept any multipart fields to tolerate different field names
+exports.uploadMiddleware = upload.any();
 
 // Helper: forward multipart data to Python DeepFace service
 async function forwardToPythonIdentify(imageBuffer) {
@@ -40,7 +42,11 @@ async function forwardToPythonIdentify(imageBuffer) {
 exports.register = async (req, res) => {
   try {
     // Accept either emergencyId (preferred) or user_id (legacy mobile key)
-    const emergencyId = req.body.emergencyId || req.body.user_id;
+    let emergencyId = req.body.emergencyId || req.body.user_id;
+    if (!emergencyId) {
+      // generate new uuid if not supplied
+      emergencyId = uuidv4();
+    }
     const { profileJson } = req.body;
 
     // Extract image buffer: multipart upload (req.file) OR base64 JSON field
