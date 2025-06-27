@@ -100,15 +100,18 @@ exports.generateAiSummary = async (req, res) => {
       return res.status(401).json({ msg: 'Not authorized' });
     }
 
-    // --- AI Processing Simulation ---
-    // In a real application, this is where you would call an external AI service.
-    // For now, we'll just generate a placeholder summary.
-    const placeholderSummary = `AI-generated summary for ${record.title} (${record.recordType}): This document appears to be a standard ${record.recordType.toLowerCase()}. Key findings include [simulated key finding 1] and [simulated key finding 2]. No critical alerts detected. This is a simulated summary.`;
+    // --- Real AI Processing via HuggingFace Space ---
+    const { summarizeReport } = require('../services/aiSummarizerService');
 
-    record.aiSummary = placeholderSummary;
-    await record.save();
-
-    res.json(record);
+    try {
+      const summaryText = await summarizeReport(record.filePath);
+      record.aiSummary = summaryText;
+      await record.save();
+      return res.json({ summary: summaryText });
+    } catch (aiErr) {
+      console.error('AI summarization failed:', aiErr);
+      return res.status(500).json({ msg: 'AI summarization failed', error: aiErr.message });
+    }
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
