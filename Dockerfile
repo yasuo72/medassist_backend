@@ -2,10 +2,7 @@ FROM node:18-slim
 
 WORKDIR /app
 
-# Install system dependencies (Poppler for pdftoppm)
-RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils && rm -rf /var/lib/apt/lists/*
-
-# Install node dependencies
+# Install dependencies
 COPY package*.json ./
 RUN npm install
 

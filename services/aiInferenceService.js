@@ -6,73 +6,27 @@ const axios = require('axios');
 const fs = require('fs');
 const pdfParse = require('pdf-parse');
 const Tesseract = require('tesseract.js');
-const os = require('os');
-const path = require('path');
-const { promisify } = require('util');
-const { execFile } = require('child_process');
-const execFileAsync = promisify(execFile);
 
 async function extractText(filePath, mimeType) {
   try {
     if (mimeType === 'application/pdf') {
-      const buffer = fs.readFileSync(filePath);
-      const data = await pdfParse(buffer);
+      const data = await pdfParse(fs.readFileSync(filePath));
       if (data.text?.trim()) return data.text;
-
-      // --- Scanned PDF fallback: convert first 3 pages to PNG and OCR ---
-      const ocrText = await ocrPdfWithPdftoppm(filePath, 3);
-      if (ocrText.trim()) return ocrText;
-      // If no text extracted from scanned PDF, return empty string to avoid sending PDF to Tesseract which cannot read it.
-      return '';
     }
-    // Fallback – only run OCR if the file is an image
-    if (mimeType && mimeType.startsWith('image/')) {
-      const result = await Tesseract.recognize(filePath, 'eng');
-      return result.data.text || '';
-    }
-    // Unsupported type for OCR
-    return '';
+    // Fallback / image handling via OCR
+    const result = await Tesseract.recognize(filePath, 'eng');
+    return result.data.text || '';
   } catch (err) {
     console.error('Text extraction failed:', err);
     return '';
   }
 }
 
-// Convert PDF pages to PNG via `pdftoppm` (Poppler) then OCR with Tesseract.
-// Returns empty string if `pdftoppm` is unavailable.
-async function ocrPdfWithPdftoppm(pdfPath, maxPages = 3) {
-  const tmpBase = path.join(os.tmpdir(), `pdftoppm_${Date.now()}`);
-  try {
-    // -png: output PNG, -r 200: dpi, -l: last page
-    await execFileAsync('pdftoppm', ['-png', '-r', '200', '-l', String(maxPages), pdfPath, tmpBase]);
-  } catch (err) {
-    console.warn('pdftoppm not found or failed:', err.message);
-    return '';
-  }
-  let combinedText = '';
-  for (let i = 1; i <= maxPages; i++) {
-    const imgPath = `${tmpBase}-${i}.png`;
-    if (!fs.existsSync(imgPath)) break;
-    try {
-      const { data } = await Tesseract.recognize(imgPath, 'eng');
-      combinedText += data.text + '\n';
-    } catch (e) {
-      console.error('Tesseract OCR failed on page', i, e);
-    } finally {
-      fs.unlink(imgPath, () => {}); // clean up
-    }
-  }
-  return combinedText;
-}
-
 async function summarizeReport(filePath, mimeType) {
   const apiUrl = process.env.HF_SPACE_API_URL;
   if (!apiUrl) throw new Error('HF_SPACE_API_URL env variable is missing');
 
-  const extracted = await extractText(filePath, mimeType);
-  if (!extracted.trim()) return 'No readable text found in the document.';
-  // Craft a better prompt so the model highlights abnormal values instead of echoing raw text.
-  const text = `Summarize the following medical lab report in simple terms. Point out which values are high or low and what that could mean. Limit the response to 150 words.\n\n${extracted.slice(0, 1500)}`;
+  const text = (await extractText(filePath, mimeType)).slice(0, 1024);
   if (!text) return 'No readable text found in the document.';
 
   const headers = { 'Content-Type': 'application/json' };
