@@ -25,9 +25,13 @@ async function extractText(filePath, mimeType) {
       // If no text extracted from scanned PDF, return empty string to avoid sending PDF to Tesseract which cannot read it.
       return '';
     }
-    // Fallback / image handling via OCR
-    const result = await Tesseract.recognize(filePath, 'eng');
-    return result.data.text || '';
+    // Fallback – only run OCR if the file is an image
+    if (mimeType && mimeType.startsWith('image/')) {
+      const result = await Tesseract.recognize(filePath, 'eng');
+      return result.data.text || '';
+    }
+    // Unsupported type for OCR
+    return '';
   } catch (err) {
     console.error('Text extraction failed:', err);
     return '';
