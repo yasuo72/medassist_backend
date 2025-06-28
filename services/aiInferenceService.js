@@ -69,7 +69,10 @@ async function summarizeReport(filePath, mimeType) {
   const apiUrl = process.env.HF_SPACE_API_URL;
   if (!apiUrl) throw new Error('HF_SPACE_API_URL env variable is missing');
 
-  const text = (await extractText(filePath, mimeType)).slice(0, 1024);
+  const extracted = await extractText(filePath, mimeType);
+  if (!extracted.trim()) return 'No readable text found in the document.';
+  // Craft a better prompt so the model highlights abnormal values instead of echoing raw text.
+  const text = `Summarize the following medical lab report in simple terms. Point out which values are high or low and what that could mean. Limit the response to 150 words.\n\n${extracted.slice(0, 1500)}`;
   if (!text) return 'No readable text found in the document.';
 
   const headers = { 'Content-Type': 'application/json' };
