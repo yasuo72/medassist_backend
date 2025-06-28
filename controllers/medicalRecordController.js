@@ -101,10 +101,10 @@ exports.generateAiSummary = async (req, res) => {
     }
 
     // --- Real AI Processing via HuggingFace Space ---
-    const { summarizeReport } = require('../services/aiSummarizerService');
+    const { summarizeReport } = require('../services/aiInferenceService');
 
     try {
-      const summaryText = await summarizeReport(record.filePath);
+      const summaryText = await summarizeReport(record.filePath, record.fileMimetype);
       record.aiSummary = summaryText;
       await record.save();
       return res.json({ summary: summaryText });

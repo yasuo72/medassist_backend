@@ -1,4 +1,15 @@
+// Deprecated: logic moved to aiInferenceService.js
+module.exports = {};
+// Performs local text extraction (PDF or image) then calls Hugging Face
+// Inference API (e.g. facebook/bart-large-cnn) to obtain a summary.
+
 const axios = require('axios');
+const fs = require('fs');
+const pdfParse = require('pdf-parse');
+const Tesseract = require('tesseract.js');
+const fs = require('fs');
+const pdfParse = require('pdf-parse');
+const Tesseract = require('tesseract.js');
 const fs = require('fs');
 const FormData = require('form-data');
 
@@ -20,41 +31,53 @@ const FormData = require('form-data');
  *                          file on disk (PDF / image).
  * @returns {Promise<string>} Resolves with the summary text.
  */
-async function summarizeReport(filePath) {
+async function extractText(filePath, mimeType) {
+  if (mimeType === 'application/pdf') {
+    const dataBuffer = fs.readFileSync(filePath);
+    const data = await pdfParse(dataBuffer);
+    return data.text || '';
+  }
+  // everything else – treat as image for OCR
+  const { data } = await Tesseract.recognize(filePath, 'eng');
+  return data.text || '';
+}
+
+/**
+ * Summarize a medical report by first extracting text (PDF or image) then
+ * sending it to Hugging Face Inference API for BART summarization.
+ * @param {string} filePath
+ * @param {string} mimeType
+ * @returns {Promise<string>}
+ */
+async function summarizeReport(filePath, mimeType) {
   const apiUrl = process.env.HF_SPACE_API_URL;
   if (!apiUrl) {
     throw new Error('HF_SPACE_API_URL environment variable is not set');
   }
 
-  const form = new FormData();
-  form.append('file', fs.createReadStream(filePath));
+    // 1) Extract text (limit to 1024 chars for BART)
+  const rawText = (await extractText(filePath, mimeType)).slice(0, 1024);
 
   const headers = {
-    ...form.getHeaders(),
+    'Content-Type': 'application/json',
   };
-
   if (process.env.HF_API_TOKEN) {
     headers['Authorization'] = `Bearer ${process.env.HF_API_TOKEN}`;
   }
 
-  const resp = await axios.post(apiUrl, form, {
-    headers,
-    maxBodyLength: Infinity,
-    timeout: 1000 * 60 * 2, // 2 minutes
-  });
+  // 2) Call inference endpoint
+  const resp = await axios.post(
+    apiUrl,
+    { inputs: rawText },
+    { headers, timeout: 1000 * 60 }
+  );
 
-  // The Space should return something like { summary: "..." } or { data: "..." }
   const data = resp.data;
-  if (!data) throw new Error('Empty response from AI summarizer');
-
+  if (Array.isArray(data) && data[0]?.summary_text) return data[0].summary_text;
+  if (data?.summary) return data.summary;
   if (typeof data === 'string') return data;
-  if (data.summary) return data.summary;
-  if (data.data) return data.data;
-
-  // Fallback: stringify entire response
-  return JSON.stringify(data);
+  throw new Error('Unexpected response from HF API');
 }
 
-module.exports = {
-  summarizeReport,
-};
+module.exports = { summarizeReport };
+
