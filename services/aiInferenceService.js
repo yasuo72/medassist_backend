@@ -22,6 +22,8 @@ async function extractText(filePath, mimeType) {
       // --- Scanned PDF fallback: convert first 3 pages to PNG and OCR ---
       const ocrText = await ocrPdfWithPdftoppm(filePath, 3);
       if (ocrText.trim()) return ocrText;
+      // If no text extracted from scanned PDF, return empty string to avoid sending PDF to Tesseract which cannot read it.
+      return '';
     }
     // Fallback / image handling via OCR
     const result = await Tesseract.recognize(filePath, 'eng');
