@@ -67,11 +67,17 @@ exports.deleteMedicalRecord = async (req, res) => {
       return res.status(401).json({ msg: 'Not authorized' });
     }
 
-    // Delete the file from the filesystem
-    fs.unlink(record.filePath, async (err) => {
+    // Delete the file from the filesystem (ensure absolute path)
+    const filePathToDelete = path.isAbsolute(record.filePath)
+      ? record.filePath
+      : path.join(__dirname, '..', record.filePath);
+
+    fs.unlink(filePathToDelete, async (err) => {
       if (err) {
         // Log the error but proceed to delete from DB anyway
         console.error('File deletion error:', err);
+        // If the file is already missing we log and continue to delete DB record
+
       }
 
       await MedicalRecord.findByIdAndDelete(req.params.id);
