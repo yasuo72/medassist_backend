@@ -67,11 +67,17 @@ exports.deleteMedicalRecord = async (req, res) => {
       return res.status(401).json({ msg: 'Not authorized' });
     }
 
-    // Delete the file from the filesystem
-    fs.unlink(record.filePath, async (err) => {
+    // Delete the file from the filesystem (ensure absolute path)
+    const filePathToDelete = path.isAbsolute(record.filePath)
+      ? record.filePath
+      : path.join(__dirname, '..', record.filePath);
+
+    fs.unlink(filePathToDelete, async (err) => {
       if (err) {
         // Log the error but proceed to delete from DB anyway
         console.error('File deletion error:', err);
+        // If the file is already missing we log and continue to delete DB record
+
       }
 
       await MedicalRecord.findByIdAndDelete(req.params.id);
@@ -100,15 +106,18 @@ exports.generateAiSummary = async (req, res) => {
       return res.status(401).json({ msg: 'Not authorized' });
     }
 
-    // --- AI Processing Simulation ---
-    // In a real application, this is where you would call an external AI service.
-    // For now, we'll just generate a placeholder summary.
-    const placeholderSummary = `AI-generated summary for ${record.title} (${record.recordType}): This document appears to be a standard ${record.recordType.toLowerCase()}. Key findings include [simulated key finding 1] and [simulated key finding 2]. No critical alerts detected. This is a simulated summary.`;
+    // --- Real AI Processing via HuggingFace Space ---
+    const { summarizeReport } = require('../services/aiInferenceService');
 
-    record.aiSummary = placeholderSummary;
-    await record.save();
-
-    res.json(record);
+    try {
+      const summaryText = await summarizeReport(record.filePath, record.fileMimetype);
+      record.aiSummary = summaryText;
+      await record.save();
+      return res.json({ summary: summaryText });
+    } catch (aiErr) {
+      console.error('AI summarization failed:', aiErr);
+      return res.status(500).json({ msg: 'AI summarization failed', error: aiErr.message });
+    }
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');

@@ -2,3 +2,6 @@
 root = "."          # build from medassist-backend directory itself
 buildCommand = "npm install"
 startCommand = "node server.js"
+
+[env]
+FACE_SERVICE_URL = "https://faceapi-production-8bea.up.railway.app"

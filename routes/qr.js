@@ -13,4 +13,7 @@ router.get('/generate', auth, qrController.generateQrCode);
 // @access  Private
 router.get('/nfc-payload', auth, qrController.getNfcPayload);
 
+// Public fetch by emergencyId
+router.get('/:emergencyId', qrController.getQrByEmergencyId);
+
 module.exports = router;

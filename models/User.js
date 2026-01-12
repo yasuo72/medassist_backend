@@ -24,6 +24,9 @@ const UserSchema = new mongoose.Schema({
     unique: true,
     index: true,
   },
+  qrUrl: {
+    type: String,
+  },
   faceEmbedding: {
     type: String, // Will store the base64 encoded hash/vector
   },

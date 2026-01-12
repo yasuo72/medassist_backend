@@ -193,3 +193,20 @@ exports.getNfcPayload = async (req, res) => {
     res.status(500).send('Server Error');
   }
 };
+
+// @desc    Public: retrieve QR URL for emergency profile
+// @route   GET /api/qr/:emergencyId
+// @access  Public
+exports.getQrByEmergencyId = async (req, res) => {
+  try {
+    const { emergencyId } = req.params;
+    const user = await User.findOne({ emergencyId });
+    if (!user || !user.qrUrl) {
+      return res.status(404).json({ error: 'QR not found for this emergencyId' });
+    }
+    res.json({ emergencyId, qrUrl: user.qrUrl });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
