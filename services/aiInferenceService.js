@@ -37,6 +37,15 @@ async function summarizeReport(filePath, mimeType, meta = {}) {
   const normalizedBase = base.replace(/\/+$/, '');
   const apiUrl = `${normalizedBase}/api/receipts`;
 
+  // Debug logging so we can confirm the new Gemini / receipt-backend flow is used
+  console.log('[AI] summarizeReport using receipt-backend:', apiUrl);
+  console.log('[AI] Extracted text length:', text.length, 'meta:', {
+    userId: meta.userId,
+    title: meta.title,
+    recordType: meta.recordType,
+    documentType: meta.documentType,
+  });
+
   // Build a payload compatible with the receipt-backend createReceipt endpoint.
   // We treat the medical record as a generic medical document; the extracted
   // text is passed as OCR text and also as a single "item" for visibility.
