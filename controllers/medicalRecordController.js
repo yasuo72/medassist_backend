@@ -106,11 +106,21 @@ exports.generateAiSummary = async (req, res) => {
       return res.status(401).json({ msg: 'Not authorized' });
     }
 
-    // --- Real AI Processing via HuggingFace Space ---
+    // --- AI Processing via Gemini-backed receipt-backend ---
     const { summarizeReport } = require('../services/aiInferenceService');
 
     try {
-      const summaryText = await summarizeReport(record.filePath, record.fileMimetype);
+      // Resolve file path similarly to delete logic to avoid cwd issues
+      const filePathToUse = path.isAbsolute(record.filePath)
+        ? record.filePath
+        : path.join(__dirname, '..', record.filePath);
+
+      const summaryText = await summarizeReport(filePathToUse, record.fileMimetype, {
+        userId: req.user.id,
+        title: record.title,
+        recordType: record.recordType,
+        documentType: record.recordType,
+      });
       record.aiSummary = summaryText;
       await record.save();
       return res.json({ summary: summaryText });
