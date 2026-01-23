@@ -137,6 +137,9 @@ exports.identify = async (req, res) => {
       allergies: user.allergies,
       medicalConditions: user.medicalConditions,
       currentMedications: user.currentMedications,
+      // Expose emergencyContacts so emergency viewer and other clients
+      // can show call buttons when the user is identified by face.
+      emergencyContacts: user.emergencyContacts || [],
     };
 
     res.json({ match: true, similarity: pythonResp.similarity, profile });
